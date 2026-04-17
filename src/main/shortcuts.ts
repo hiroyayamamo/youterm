@@ -1,8 +1,29 @@
 import { Menu, type MenuItemConstructorOptions } from 'electron'
 import type { ModeController } from './modeController'
+import type { SettingsController } from './settingsController'
 import type { WindowBundle } from './window'
 
-export function installShortcuts(bundle: WindowBundle, ctrl: ModeController): void {
+const STEP = 0.05
+
+export function installShortcuts(
+  bundle: WindowBundle,
+  ctrl: ModeController,
+  settings: SettingsController,
+): void {
+  const adjustTransparency = (delta: number) => {
+    const current = settings.getSettings().transparency
+    settings.dispatch({ type: 'set-transparency', value: current + delta })
+  }
+
+  const togglePanel = () => {
+    if (ctrl.getState().mode === 'youtube-only') {
+      ctrl.dispatch({ type: 'set-mode', mode: 'overlay' })
+    }
+    if (!bundle.terminalView.webContents.isDestroyed()) {
+      bundle.terminalView.webContents.send('panel:toggle')
+    }
+  }
+
   const template: MenuItemConstructorOptions[] = [
     {
       label: 'youterm',
@@ -51,6 +72,27 @@ export function installShortcuts(bundle: WindowBundle, ctrl: ModeController): vo
           label: 'Toggle Input Target',
           accelerator: 'Cmd+\\',
           click: () => ctrl.dispatch({ type: 'toggle-input-target' }),
+        },
+      ],
+    },
+    {
+      label: 'Settings',
+      submenu: [
+        {
+          label: 'Preferences',
+          accelerator: 'Cmd+,',
+          click: togglePanel,
+        },
+        { type: 'separator' },
+        {
+          label: 'More Opaque',
+          accelerator: 'Cmd+]',
+          click: () => adjustTransparency(STEP),
+        },
+        {
+          label: 'More Transparent',
+          accelerator: 'Cmd+[',
+          click: () => adjustTransparency(-STEP),
         },
       ],
     },

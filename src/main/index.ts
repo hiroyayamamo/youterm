@@ -29,7 +29,7 @@ async function start() {
   })
 
   settingsBridge = attachSettings(bundle.terminalView, settings)
-  installShortcuts(bundle, modeCtrl)
+  installShortcuts(bundle, modeCtrl, settings)
 
   app.on('activate', async () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -42,7 +42,7 @@ async function start() {
         }
       })
       settingsBridge = attachSettings(bundle.terminalView, settings!)
-      installShortcuts(bundle, modeCtrl)
+      installShortcuts(bundle, modeCtrl!, settings!)
     }
   })
 }
