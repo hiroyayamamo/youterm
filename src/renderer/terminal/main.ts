@@ -1,5 +1,7 @@
 import { mountTerminal } from './terminal'
 import { createModeIndicator } from './modeIndicator'
+import { createOptionsPanel } from './optionsPanel'
+import { createPanelController } from './panelController'
 import type { Settings } from '../../shared/types'
 import { COLOR_VALUES } from '../../shared/types'
 
@@ -16,9 +18,9 @@ async function init(): Promise<void> {
   const root = document.getElementById('terminal-root')
   if (!root) throw new Error('terminal-root missing')
 
-  // Apply settings BEFORE mounting xterm to prevent flicker
+  let initial: Settings | undefined
   try {
-    const initial = await window.youtermAPI.settingsGetInitial()
+    initial = await window.youtermAPI.settingsGetInitial()
     applySettingsToCSS(initial)
   } catch (err) {
     console.error('[renderer] failed to load initial settings:', err)
@@ -31,10 +33,27 @@ async function init(): Promise<void> {
   const { term, fit } = mountTerminal(inner)
   const indicator = createModeIndicator(root)
 
+  const panel = createOptionsPanel({
+    onTransparencyInput: value => window.youtermAPI.settingsSetTransparency(value),
+    onColorSelect: color => window.youtermAPI.settingsSetColor(color),
+    onReset: () => window.youtermAPI.settingsReset(),
+  })
+  root.appendChild(panel.element)
+  if (initial) panel.updateSettings(initial)
+
+  const panelCtrl = createPanelController({
+    panel,
+    returnFocus: () => term.focus(),
+  })
+
   window.youtermAPI.onPtyData(data => term.write(data))
   term.onData(data => window.youtermAPI.ptyWrite(data))
   window.youtermAPI.onStateChanged(state => indicator.update(state))
-  window.youtermAPI.onSettingsChanged(s => applySettingsToCSS(s))
+  window.youtermAPI.onSettingsChanged(s => {
+    applySettingsToCSS(s)
+    panel.updateSettings(s)
+  })
+  window.youtermAPI.onPanelToggle(() => panelCtrl.toggle())
 
   const doFit = () => {
     try {
