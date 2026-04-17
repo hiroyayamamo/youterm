@@ -1,0 +1,26 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: Menlo, monospace;
+  color: #e0e0e0;
+}
+
+#terminal-root {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.xterm {
+  width: 100%;
+  height: 100%;
+}
+.xterm-viewport {
+  background-color: transparent !important;
+}
