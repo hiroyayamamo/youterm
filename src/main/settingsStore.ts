@@ -25,10 +25,15 @@ export function validateAndNormalize(raw: unknown): Settings {
   if (typeof r.lastMode !== 'string') return INITIAL_SETTINGS
   if (!VALID_MODES.includes(r.lastMode as Mode)) return INITIAL_SETTINGS
 
+  const blur =
+    typeof r.blur === 'number' && r.blur >= 0 && r.blur <= 1
+      ? r.blur
+      : INITIAL_SETTINGS.blur
   return {
     transparency: r.transparency,
     bgColor: r.bgColor as ColorKey,
     lastMode: r.lastMode as Mode,
+    blur,
   }
 }
 
