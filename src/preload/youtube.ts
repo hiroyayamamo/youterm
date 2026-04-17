@@ -1,2 +1,2 @@
-// Stub. Remains empty per spec (YouTube view uses sandbox without contextBridge).
+// YouTube WebContentsView の preload。v0.1 では contextBridge 不要。
 export {}
