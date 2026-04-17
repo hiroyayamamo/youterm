@@ -57,17 +57,20 @@ export function createMainWindow(): WindowBundle {
   win.contentView.addChildView(youtubeView)
   win.contentView.addChildView(terminalView)
 
-  const applyBounds = () => {
-    const { width, height } = win.getContentBounds()
-    youtubeView.setBounds({ x: 0, y: 0, width, height })
-    terminalView.setBounds({ x: 0, y: 0, width, height })
-  }
-  applyBounds()
-  win.on('resize', applyBounds)
-  // Ensure terminal's FitAddon runs after initial load (applyBounds fires a resize
-  // which the renderer's ResizeObserver will pick up).
+  // Minimal initial bounds so the views render before modeController takes over.
+  // The ModeController will re-apply proper bounds on construction.
+  const { width, height } = win.getContentBounds()
+  youtubeView.setBounds({ x: 0, y: 0, width, height })
+  terminalView.setBounds({ x: 0, y: 0, width, height })
+
+  // Ensure terminal renderer gets a resize signal after its first load.
+  // This fires an Electron resize which the modeController (registered later) will observe.
   terminalView.webContents.once('did-finish-load', () => {
-    setTimeout(applyBounds, 50)
+    setTimeout(() => {
+      const { width, height } = win.getContentBounds()
+      // Trigger a no-op bounds update so ResizeObserver fires in renderer
+      terminalView.setBounds({ x: 0, y: 0, width, height })
+    }, 50)
   })
 
   win.once('ready-to-show', () => win.show())
