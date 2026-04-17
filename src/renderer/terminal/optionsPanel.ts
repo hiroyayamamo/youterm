@@ -8,6 +8,7 @@ export interface OptionsPanelHandle {
 
 export interface OptionsPanelCallbacks {
   onTransparencyInput(value: number): void
+  onBlurInput(value: number): void
   onColorSelect(color: ColorKey): void
   onReset(): void
 }
@@ -23,6 +24,12 @@ export function createOptionsPanel(callbacks: OptionsPanelCallbacks): OptionsPan
       <label for="opt-transparency">Transparency</label>
       <input type="range" id="opt-transparency" min="0" max="0.9" step="0.05" />
       <span class="opt-value" id="opt-transparency-value">0.75</span>
+    </div>
+
+    <div class="options-section">
+      <label for="opt-blur">Blur</label>
+      <input type="range" id="opt-blur" min="0" max="1" step="0.05" />
+      <span class="opt-value" id="opt-blur-value">10%</span>
     </div>
 
     <div class="options-section">
@@ -42,11 +49,16 @@ export function createOptionsPanel(callbacks: OptionsPanelCallbacks): OptionsPan
 
   const slider = panel.querySelector<HTMLInputElement>('#opt-transparency')!
   const sliderValue = panel.querySelector<HTMLSpanElement>('#opt-transparency-value')!
+  const blurSlider = panel.querySelector<HTMLInputElement>('#opt-blur')!
+  const blurValue = panel.querySelector<HTMLSpanElement>('#opt-blur-value')!
   const swatches = panel.querySelectorAll<HTMLButtonElement>('.swatch')
   const resetBtn = panel.querySelector<HTMLButtonElement>('#opt-reset')!
 
   slider.addEventListener('input', () => {
     callbacks.onTransparencyInput(slider.valueAsNumber)
+  })
+  blurSlider.addEventListener('input', () => {
+    callbacks.onBlurInput(blurSlider.valueAsNumber)
   })
 
   swatches.forEach(s => {
@@ -70,6 +82,8 @@ export function createOptionsPanel(callbacks: OptionsPanelCallbacks): OptionsPan
     updateSettings(s: Settings) {
       slider.value = String(s.transparency)
       sliderValue.textContent = s.transparency.toFixed(2)
+      blurSlider.value = String(s.blur)
+      blurValue.textContent = `${Math.round(s.blur * 100)}%`
       swatches.forEach(btn => {
         btn.classList.toggle('is-active', btn.dataset.color === s.bgColor)
       })

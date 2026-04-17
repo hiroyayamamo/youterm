@@ -12,6 +12,7 @@ function applySettingsToCSS(s: Settings): void {
   root.setProperty('--term-bg-g', String(g))
   root.setProperty('--term-bg-b', String(b))
   root.setProperty('--term-alpha', String(s.transparency))
+  root.setProperty('--term-blur', `${Math.round(s.blur * 20)}px`)
 }
 
 async function init(): Promise<void> {
@@ -35,6 +36,7 @@ async function init(): Promise<void> {
 
   const panel = createOptionsPanel({
     onTransparencyInput: value => window.youtermAPI.settingsSetTransparency(value),
+    onBlurInput: value => window.youtermAPI.settingsSetBlur(value),
     onColorSelect: color => window.youtermAPI.settingsSetColor(color),
     onReset: () => window.youtermAPI.settingsReset(),
   })

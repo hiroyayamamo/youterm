@@ -3,6 +3,7 @@
   --term-bg-g: 0;
   --term-bg-b: 0;
   --term-alpha: 0.75;
+  --term-blur: 2px;
 }
 
 html, body {
@@ -20,6 +21,8 @@ html, body {
   position: absolute;
   inset: 0;
   background: rgba(var(--term-bg-r), var(--term-bg-g), var(--term-bg-b), var(--term-alpha));
+  backdrop-filter: blur(var(--term-blur));
+  -webkit-backdrop-filter: blur(var(--term-blur));
   overflow: hidden;
 }
 
