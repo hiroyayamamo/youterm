@@ -8,9 +8,18 @@ const { term, fit } = mountTerminal(root)
 window.youtermAPI.onPtyData(data => term.write(data))
 term.onData(data => window.youtermAPI.ptyWrite(data))
 
-const resize = () => {
-  fit.fit()
-  window.youtermAPI.ptyResize({ cols: term.cols, rows: term.rows })
+const doFit = () => {
+  try {
+    fit.fit()
+    window.youtermAPI.ptyResize({ cols: term.cols, rows: term.rows })
+  } catch {
+    // fit() can throw if container has zero dimensions during early layout
+  }
 }
-resize()
-window.addEventListener('resize', resize)
+
+// Run after first paint for safe initial sizing
+requestAnimationFrame(doFit)
+
+// React to any container size change (includes window resize + layout shifts)
+const observer = new ResizeObserver(doFit)
+observer.observe(root)
