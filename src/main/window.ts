@@ -37,6 +37,53 @@ export function createMainWindow(): WindowBundle {
   youtubeView.webContents.loadURL('https://www.youtube.com/')
 
   const terminalSession = session.fromPartition('persist:terminal')
+
+  // Allow YouTube (and its iframe subresources) to be embedded in an iframe inside
+  // the terminal renderer by stripping X-Frame-Options and frame-ancestors CSP.
+  // Scoped to youtube / google media domains so other sites keep their protections.
+  const YOUTUBE_DOMAINS = [
+    'youtube.com',
+    'www.youtube.com',
+    'm.youtube.com',
+    'youtu.be',
+    'googlevideo.com',
+    'ytimg.com',
+    'googleusercontent.com',
+    'doubleclick.net',
+    'google.com',
+    'gstatic.com',
+  ]
+  const isYoutubeHost = (url: string): boolean => {
+    try {
+      const host = new URL(url).hostname
+      return YOUTUBE_DOMAINS.some(d => host === d || host.endsWith('.' + d))
+    } catch {
+      return false
+    }
+  }
+
+  terminalSession.webRequest.onHeadersReceived((details, callback) => {
+    if (!isYoutubeHost(details.url)) {
+      callback({})
+      return
+    }
+    const h = details.responseHeaders || {}
+    const newHeaders: Record<string, string[]> = {}
+    for (const k of Object.keys(h)) {
+      const lower = k.toLowerCase()
+      if (lower === 'x-frame-options') continue
+      if (lower === 'content-security-policy') {
+        const v = Array.isArray(h[k]) ? h[k] : [h[k] as unknown as string]
+        newHeaders[k] = (v as string[]).map(s =>
+          s.replace(/frame-ancestors[^;]*;?/gi, '').trim(),
+        )
+        continue
+      }
+      newHeaders[k] = h[k] as string[]
+    }
+    callback({ responseHeaders: newHeaders })
+  })
+
   const terminalView = new WebContentsView({
     webPreferences: {
       session: terminalSession,
