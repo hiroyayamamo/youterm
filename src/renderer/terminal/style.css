@@ -13,9 +13,15 @@ html, body {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
-  padding: 12px 12px 48px 12px;
-  box-sizing: border-box;
   overflow: hidden;
+}
+
+#terminal-inner {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  bottom: 36px;
 }
 
 .xterm {
@@ -32,7 +38,7 @@ html, body {
   height: 0;
 }
 
-/* Style the vertical scrollbar to be subtle and semi-transparent */
+/* Subtle vertical scrollbar for xterm scrollback */
 .xterm-viewport::-webkit-scrollbar {
   width: 8px;
   background: transparent;
