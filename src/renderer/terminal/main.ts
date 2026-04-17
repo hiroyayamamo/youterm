@@ -3,7 +3,12 @@ import { mountTerminal } from './terminal'
 const root = document.getElementById('terminal-root')
 if (!root) throw new Error('terminal-root missing')
 
-const { term, fit } = mountTerminal(root)
+// Explicitly-sized inner container removes padding-vs-fit ambiguity
+const inner = document.createElement('div')
+inner.id = 'terminal-inner'
+root.appendChild(inner)
+
+const { term, fit } = mountTerminal(inner)
 
 window.youtermAPI.onPtyData(data => term.write(data))
 term.onData(data => window.youtermAPI.ptyWrite(data))
@@ -13,13 +18,10 @@ const doFit = () => {
     fit.fit()
     window.youtermAPI.ptyResize({ cols: term.cols, rows: term.rows })
   } catch {
-    // fit() can throw if container has zero dimensions during early layout
+    // fit() can throw during 0x0 layout transitions
   }
 }
 
-// Run after first paint for safe initial sizing
 requestAnimationFrame(doFit)
-
-// React to any container size change (includes window resize + layout shifts)
 const observer = new ResizeObserver(doFit)
-observer.observe(root)
+observer.observe(inner)
