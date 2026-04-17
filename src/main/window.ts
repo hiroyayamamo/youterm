@@ -7,6 +7,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 export interface WindowBundle {
   win: BrowserWindow
   youtubeView: WebContentsView
+  terminalView: WebContentsView
 }
 
 export function createMainWindow(): WindowBundle {
@@ -35,15 +36,35 @@ export function createMainWindow(): WindowBundle {
   })
   youtubeView.webContents.loadURL('https://www.youtube.com/')
 
+  const terminalSession = session.fromPartition('persist:terminal')
+  const terminalView = new WebContentsView({
+    webPreferences: {
+      session: terminalSession,
+      preload: join(__dirname, '../preload/terminal.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      transparent: true,
+    },
+  })
+  terminalView.setBackgroundColor('#00000000')
+
+  if (process.env.ELECTRON_RENDERER_URL) {
+    terminalView.webContents.loadURL(`${process.env.ELECTRON_RENDERER_URL}/terminal/index.html`)
+  } else {
+    terminalView.webContents.loadFile(join(__dirname, '../renderer/terminal/index.html'))
+  }
+
   win.contentView.addChildView(youtubeView)
+  win.contentView.addChildView(terminalView)
 
   const applyBounds = () => {
     const { width, height } = win.getContentBounds()
     youtubeView.setBounds({ x: 0, y: 0, width, height })
+    terminalView.setBounds({ x: 0, y: 0, width, height })
   }
   applyBounds()
   win.on('resize', applyBounds)
 
   win.once('ready-to-show', () => win.show())
-  return { win, youtubeView }
+  return { win, youtubeView, terminalView }
 }
