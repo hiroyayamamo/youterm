@@ -6,13 +6,6 @@ export interface IPtyLike {
   kill(): void
 }
 
-export interface PtySpawnOptions {
-  cwd: string
-  env: NodeJS.ProcessEnv
-  cols?: number
-  rows?: number
-}
-
 export type PtySpawn = (
   shell: string,
   args: string[],
@@ -26,7 +19,8 @@ export type PtySpawn = (
 ) => IPtyLike
 
 export interface PtyHandle {
-  onData(cb: (data: string) => void): void
+  onData(cb: (data: string) => void): () => void
+  onExit(cb: () => void): () => void
   write(data: string): void
   resize(cols: number, rows: number): void
   kill(): void
@@ -56,13 +50,29 @@ export function createPtyHandle(opts: CreatePtyOptions): PtyHandle {
   })
 
   const dataHandlers: Array<(data: string) => void> = []
+  const exitHandlers: Array<() => void> = []
+
   pty.onData(data => {
     for (const h of dataHandlers) h(data)
+  })
+  pty.onExit(() => {
+    for (const h of exitHandlers) h()
   })
 
   return {
     onData(cb) {
       dataHandlers.push(cb)
+      return () => {
+        const i = dataHandlers.indexOf(cb)
+        if (i >= 0) dataHandlers.splice(i, 1)
+      }
+    },
+    onExit(cb) {
+      exitHandlers.push(cb)
+      return () => {
+        const i = exitHandlers.indexOf(cb)
+        if (i >= 0) exitHandlers.splice(i, 1)
+      }
     },
     write(data) {
       pty.write(data)
@@ -77,6 +87,8 @@ export function createPtyHandle(opts: CreatePtyOptions): PtyHandle {
 }
 
 export async function createRealPtySpawn(): Promise<PtySpawn> {
+  // Dynamic import keeps node-pty (native module) out of the test bundle
+  // and avoids static bundling issues in electron-vite.
   const nodePty = await import('node-pty')
   return (shell, args, options) =>
     nodePty.spawn(shell, args, {
@@ -85,5 +97,5 @@ export async function createRealPtySpawn(): Promise<PtySpawn> {
       cols: options.cols,
       rows: options.rows,
       name: options.name,
-    }) as unknown as IPtyLike
+    }) as IPtyLike
 }
