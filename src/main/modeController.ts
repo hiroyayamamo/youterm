@@ -11,7 +11,6 @@ export interface ModeController {
 
 export interface ModeControllerDeps {
   win: BrowserWindow
-  youtubeView: WebContentsView
   terminalView: WebContentsView
 }
 
@@ -28,31 +27,6 @@ export function createModeController(
     : INITIAL_STATE
   const subs = new Set<(s: AppState) => void>()
 
-  const applyToViews = () => {
-    const { width, height } = deps.win.getContentBounds()
-    const hidden = { x: 0, y: 0, width: 0, height: 0 }
-    const full = { x: 0, y: 0, width, height }
-
-    switch (state.mode) {
-      case 'youtube-only':
-        deps.youtubeView.setBounds(full)
-        deps.terminalView.setBounds(hidden)
-        deps.youtubeView.webContents.focus()
-        break
-      case 'overlay':
-        deps.youtubeView.setBounds(full)
-        deps.terminalView.setBounds(full)
-        if (state.inputTarget === 'youtube') deps.youtubeView.webContents.focus()
-        else deps.terminalView.webContents.focus()
-        break
-      case 'terminal-only':
-        deps.youtubeView.setBounds(hidden)
-        deps.terminalView.setBounds(full)
-        deps.terminalView.webContents.focus()
-        break
-    }
-  }
-
   const broadcast = () => {
     for (const cb of subs) cb(state)
     if (!deps.terminalView.webContents.isDestroyed()) {
@@ -60,10 +34,11 @@ export function createModeController(
     }
   }
 
-  applyToViews()
-  broadcast()
-
-  deps.win.on('resize', applyToViews)
+  // Initial broadcast (subscribers can install after return, but we also need the
+  // renderer to receive the initial state once it's ready). We'll rely on the
+  // renderer's settingsGetInitial + onStateChanged pattern, AND the first broadcast
+  // fires on next tick so the IPC channel is ready.
+  setTimeout(broadcast, 0)
 
   return {
     getState: () => state,
@@ -71,7 +46,6 @@ export function createModeController(
       const next = transition(state, action)
       if (next === state) return
       state = next
-      applyToViews()
       broadcast()
     },
     subscribe(cb) {

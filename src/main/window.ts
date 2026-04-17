@@ -6,7 +6,6 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
 export interface WindowBundle {
   win: BrowserWindow
-  youtubeView: WebContentsView
   terminalView: WebContentsView
 }
 
@@ -24,23 +23,10 @@ export function createMainWindow(): WindowBundle {
     win.loadFile(join(__dirname, '../../index.html'))
   }
 
-  const youtubeSession = session.fromPartition('persist:youtube')
-  const youtubeView = new WebContentsView({
-    webPreferences: {
-      session: youtubeSession,
-      preload: join(__dirname, '../preload/youtube.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  })
-  youtubeView.webContents.loadURL('https://www.youtube.com/')
-
   const terminalSession = session.fromPartition('persist:terminal')
 
-  // Allow YouTube (and its iframe subresources) to be embedded in an iframe inside
-  // the terminal renderer by stripping X-Frame-Options and frame-ancestors CSP.
-  // Scoped to youtube / google media domains so other sites keep their protections.
+  // Allow YouTube iframe embedding: strip X-Frame-Options / frame-ancestors
+  // for youtube/google media domains. Scoped so other requests keep protections.
   const YOUTUBE_DOMAINS = [
     'youtube.com',
     'www.youtube.com',
@@ -61,7 +47,6 @@ export function createMainWindow(): WindowBundle {
       return false
     }
   }
-
   terminalSession.webRequest.onHeadersReceived((details, callback) => {
     if (!isYoutubeHost(details.url)) {
       callback({})
@@ -101,25 +86,19 @@ export function createMainWindow(): WindowBundle {
     terminalView.webContents.loadFile(join(__dirname, '../renderer/terminal/index.html'))
   }
 
-  win.contentView.addChildView(youtubeView)
   win.contentView.addChildView(terminalView)
 
-  // Minimal initial bounds so the views render before modeController takes over.
-  // The ModeController will re-apply proper bounds on construction.
-  const { width, height } = win.getContentBounds()
-  youtubeView.setBounds({ x: 0, y: 0, width, height })
-  terminalView.setBounds({ x: 0, y: 0, width, height })
+  const applyBounds = () => {
+    const { width, height } = win.getContentBounds()
+    terminalView.setBounds({ x: 0, y: 0, width, height })
+  }
+  applyBounds()
+  win.on('resize', applyBounds)
 
-  // Ensure terminal renderer gets a resize signal after its first load.
-  // This fires an Electron resize which the modeController (registered later) will observe.
   terminalView.webContents.once('did-finish-load', () => {
-    setTimeout(() => {
-      const { width, height } = win.getContentBounds()
-      // Trigger a no-op bounds update so ResizeObserver fires in renderer
-      terminalView.setBounds({ x: 0, y: 0, width, height })
-    }, 50)
+    setTimeout(applyBounds, 50)
   })
 
   win.once('ready-to-show', () => win.show())
-  return { win, youtubeView, terminalView }
+  return { win, terminalView }
 }
