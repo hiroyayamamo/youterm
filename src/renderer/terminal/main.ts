@@ -74,6 +74,15 @@ async function init(): Promise<void> {
   })
   window.youtermAPI.onPanelToggle(() => panelCtrl.toggle())
 
+  window.youtermAPI.onYoutubeReload(() => {
+    const iframe = document.getElementById('youtube-iframe') as HTMLIFrameElement | null
+    if (!iframe) return
+    // Reset src to force reload (can't call .contentWindow.location.reload cross-origin)
+    const currentSrc = iframe.src
+    iframe.src = 'about:blank'
+    requestAnimationFrame(() => { iframe.src = currentSrc })
+  })
+
   const doFit = () => {
     try {
       fit.fit()

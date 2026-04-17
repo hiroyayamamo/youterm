@@ -10,6 +10,7 @@ const stateHandlers = new Set<StateHandler>()
 const dataHandlers = new Set<DataHandler>()
 const settingsHandlers = new Set<SettingsHandler>()
 const panelToggleHandlers = new Set<VoidHandler>()
+const youtubeReloadHandlers = new Set<VoidHandler>()
 
 ipcRenderer.on('state:changed', (_e, state: AppState) => {
   for (const h of stateHandlers) h(state)
@@ -22,6 +23,9 @@ ipcRenderer.on('settings:changed', (_e, s: Settings) => {
 })
 ipcRenderer.on('panel:toggle', () => {
   for (const h of panelToggleHandlers) h()
+})
+ipcRenderer.on('youtube:reload', () => {
+  for (const h of youtubeReloadHandlers) h()
 })
 
 contextBridge.exposeInMainWorld('youtermAPI', {
@@ -47,6 +51,10 @@ contextBridge.exposeInMainWorld('youtermAPI', {
   onPanelToggle(cb: VoidHandler) {
     panelToggleHandlers.add(cb)
     return () => panelToggleHandlers.delete(cb)
+  },
+  onYoutubeReload(cb: VoidHandler) {
+    youtubeReloadHandlers.add(cb)
+    return () => youtubeReloadHandlers.delete(cb)
   },
   settingsGetInitial(): Promise<Settings> {
     return ipcRenderer.invoke('settings:get-initial')
