@@ -79,4 +79,34 @@ describe('createPtyHandle', () => {
     handle.kill()
     expect(fake._killed).toBe(true)
   })
+
+  it('onData returns an unsubscriber that removes the handler', () => {
+    const fake = makeFakePty()
+    const handle = createPtyHandle({ spawn: () => fake, cwd: '/', env: {} })
+    const received: string[] = []
+    const unsubscribe = handle.onData(d => received.push(d))
+    fake._dataHandler?.('first\n')
+    unsubscribe()
+    fake._dataHandler?.('second\n')
+    expect(received).toEqual(['first\n'])
+  })
+
+  it('onExit forwards pty exit events to subscribers', () => {
+    const fake = makeFakePty()
+    const handle = createPtyHandle({ spawn: () => fake, cwd: '/', env: {} })
+    let exited = 0
+    handle.onExit(() => { exited++ })
+    fake._exitHandler?.()
+    expect(exited).toBe(1)
+  })
+
+  it('onExit returns an unsubscriber that removes the handler', () => {
+    const fake = makeFakePty()
+    const handle = createPtyHandle({ spawn: () => fake, cwd: '/', env: {} })
+    let exited = 0
+    const unsubscribe = handle.onExit(() => { exited++ })
+    unsubscribe()
+    fake._exitHandler?.()
+    expect(exited).toBe(0)
+  })
 })
