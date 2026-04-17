@@ -14,7 +14,7 @@ html, body {
   background: transparent;
   overflow: hidden;
   font-family: Menlo, monospace;
-  color: #e0e0e0;
+  color: rgb(40, 254, 20);
 }
 
 #terminal-root {
