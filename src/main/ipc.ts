@@ -59,6 +59,9 @@ export function attachSettings(
   const onSetTransparency = (_e: unknown, value: unknown) => {
     if (typeof value === 'number') settings.dispatch({ type: 'set-transparency', value })
   }
+  const onSetBlur = (_e: unknown, value: unknown) => {
+    if (typeof value === 'number') settings.dispatch({ type: 'set-blur', value })
+  }
   const onSetColor = (_e: unknown, color: unknown) => {
     if (typeof color === 'string' && (VALID_COLORS as string[]).includes(color)) {
       settings.dispatch({ type: 'set-color', color: color as ColorKey })
@@ -67,6 +70,7 @@ export function attachSettings(
   const onReset = () => settings.dispatch({ type: 'reset' })
 
   ipcMain.on('settings:set-transparency', onSetTransparency)
+  ipcMain.on('settings:set-blur', onSetBlur)
   ipcMain.on('settings:set-color', onSetColor)
   ipcMain.on('settings:reset', onReset)
 
@@ -76,6 +80,7 @@ export function attachSettings(
   return {
     dispose() {
       ipcMain.removeListener('settings:set-transparency', onSetTransparency)
+      ipcMain.removeListener('settings:set-blur', onSetBlur)
       ipcMain.removeListener('settings:set-color', onSetColor)
       ipcMain.removeListener('settings:reset', onReset)
       ipcMain.removeHandler('settings:get-initial')
