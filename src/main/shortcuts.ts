@@ -102,15 +102,16 @@ export function installShortcuts(
         {
           label: 'Reload YouTube',
           accelerator: 'Cmd+R',
-          click: () => bundle.youtubeView.webContents.reload(),
+          click: () => {
+            if (!bundle.terminalView.webContents.isDestroyed()) {
+              bundle.terminalView.webContents.send('youtube:reload')
+            }
+          },
         },
         {
           label: 'Hard Reload',
           accelerator: 'Cmd+Shift+R',
-          click: () => {
-            bundle.youtubeView.webContents.reloadIgnoringCache()
-            bundle.terminalView.webContents.reloadIgnoringCache()
-          },
+          click: () => bundle.terminalView.webContents.reloadIgnoringCache(),
         },
         { type: 'separator' },
         { role: 'toggleDevTools' },
