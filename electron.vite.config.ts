@@ -18,6 +18,10 @@ export default defineConfig({
           terminal: resolve(__dirname, 'src/preload/terminal.ts'),
           youtube: resolve(__dirname, 'src/preload/youtube.ts'),
         },
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].js',
+        },
       },
     },
   },
