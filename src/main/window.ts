@@ -64,6 +64,11 @@ export function createMainWindow(): WindowBundle {
   }
   applyBounds()
   win.on('resize', applyBounds)
+  // Ensure terminal's FitAddon runs after initial load (applyBounds fires a resize
+  // which the renderer's ResizeObserver will pick up).
+  terminalView.webContents.once('did-finish-load', () => {
+    setTimeout(applyBounds, 50)
+  })
 
   win.once('ready-to-show', () => win.show())
   return { win, youtubeView, terminalView }
