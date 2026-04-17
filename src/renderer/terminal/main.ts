@@ -50,7 +50,24 @@ async function init(): Promise<void> {
 
   window.youtermAPI.onPtyData(data => term.write(data))
   term.onData(data => window.youtermAPI.ptyWrite(data))
-  window.youtermAPI.onStateChanged(state => indicator.update(state))
+  const applyModeClass = (mode: string) => {
+    document.body.classList.remove('mode-youtube-only', 'mode-overlay', 'mode-terminal-only')
+    document.body.classList.add(`mode-${mode}`)
+  }
+  window.youtermAPI.onStateChanged(state => {
+    indicator.update(state)
+    applyModeClass(state.mode)
+    // Focus management for input target
+    const iframe = document.getElementById('youtube-iframe') as HTMLIFrameElement | null
+    if (state.mode === 'youtube-only') {
+      iframe?.focus()
+    } else if (state.mode === 'overlay' && state.inputTarget === 'youtube') {
+      iframe?.focus()
+    } else {
+      // overlay + terminal, or terminal-only: focus xterm
+      term.focus()
+    }
+  })
   window.youtermAPI.onSettingsChanged(s => {
     applySettingsToCSS(s)
     panel.updateSettings(s)
