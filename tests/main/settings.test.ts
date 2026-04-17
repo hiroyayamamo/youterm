@@ -34,6 +34,25 @@ describe('transitionSettings', () => {
     })
   })
 
+  describe('set-blur', () => {
+    it('updates blur within range', () => {
+      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-blur', value: 0.5 })
+      expect(next.blur).toBe(0.5)
+    })
+    it('clamps value above 1 down to 1', () => {
+      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-blur', value: 1.5 })
+      expect(next.blur).toBe(1)
+    })
+    it('clamps negative value up to 0', () => {
+      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-blur', value: -0.2 })
+      expect(next.blur).toBe(0)
+    })
+    it('returns same reference when value already equals current', () => {
+      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-blur', value: 0.1 })
+      expect(next).toBe(INITIAL_SETTINGS)
+    })
+  })
+
   describe('set-last-mode', () => {
     it('updates lastMode', () => {
       const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-last-mode', mode: 'terminal-only' })
@@ -47,7 +66,7 @@ describe('transitionSettings', () => {
 
   describe('reset', () => {
     it('returns INITIAL_SETTINGS regardless of current state', () => {
-      const current: Settings = { transparency: 0.1, bgColor: 'dark-green', lastMode: 'youtube-only' }
+      const current: Settings = { transparency: 0.1, bgColor: 'dark-green', lastMode: 'youtube-only', blur: 0.5 }
       const next = transitionSettings(current, { type: 'reset' })
       expect(next).toEqual(INITIAL_SETTINGS)
     })

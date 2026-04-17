@@ -21,6 +21,7 @@ export interface YoutermAPI {
   settingsGetInitial(): Promise<Settings>
   settingsSetTransparency(value: number): void
   settingsSetColor(color: ColorKey): void
+  settingsSetBlur(value: number): void
   settingsReset(): void
 }
 
@@ -30,12 +31,14 @@ export interface Settings {
   transparency: number
   bgColor: ColorKey
   lastMode: Mode
+  blur: number
 }
 
 export const INITIAL_SETTINGS: Settings = {
   transparency: 0.75,
   bgColor: 'black',
   lastMode: 'overlay',
+  blur: 0.1,
 }
 
 export const COLOR_VALUES: Record<ColorKey, { r: number; g: number; b: number }> = {

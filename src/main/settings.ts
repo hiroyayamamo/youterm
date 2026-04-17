@@ -5,6 +5,7 @@ export type SettingsAction =
   | { type: 'set-transparency'; value: number }
   | { type: 'set-color'; color: ColorKey }
   | { type: 'set-last-mode'; mode: Mode }
+  | { type: 'set-blur'; value: number }
   | { type: 'reset' }
 
 const clamp = (n: number, min: number, max: number): number =>
@@ -25,11 +26,17 @@ export function transitionSettings(state: Settings, action: SettingsAction): Set
       if (action.mode === state.lastMode) return state
       return { ...state, lastMode: action.mode }
     }
+    case 'set-blur': {
+      const next = clamp(action.value, 0, 1)
+      if (next === state.blur) return state
+      return { ...state, blur: next }
+    }
     case 'reset': {
       if (
         state.transparency === INITIAL_SETTINGS.transparency &&
         state.bgColor === INITIAL_SETTINGS.bgColor &&
-        state.lastMode === INITIAL_SETTINGS.lastMode
+        state.lastMode === INITIAL_SETTINGS.lastMode &&
+        state.blur === INITIAL_SETTINGS.blur
       ) {
         return INITIAL_SETTINGS
       }

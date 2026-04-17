@@ -20,7 +20,7 @@ describe('createSettingsController', () => {
   afterEach(() => { vi.useRealTimers() })
 
   it('initial state is loaded from store', () => {
-    const initial: Settings = { transparency: 0.5, bgColor: 'dark-blue', lastMode: 'terminal-only' }
+    const initial: Settings = { transparency: 0.5, bgColor: 'dark-blue', lastMode: 'terminal-only', blur: 0.3 }
     const { store } = makeFakeStore(initial)
     const ctrl = createSettingsController({ store })
     expect(ctrl.getSettings()).toEqual(initial)
