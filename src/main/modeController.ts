@@ -1,5 +1,5 @@
 import type { BrowserWindow, WebContentsView } from 'electron'
-import type { AppState } from '../shared/types'
+import type { AppState, Mode } from '../shared/types'
 import { INITIAL_STATE } from '../shared/types'
 import { transition, type Action } from './state'
 
@@ -15,8 +15,17 @@ export interface ModeControllerDeps {
   terminalView: WebContentsView
 }
 
-export function createModeController(deps: ModeControllerDeps): ModeController {
-  let state: AppState = INITIAL_STATE
+export interface CreateModeControllerOptions {
+  initialMode?: Mode
+}
+
+export function createModeController(
+  deps: ModeControllerDeps,
+  opts: CreateModeControllerOptions = {},
+): ModeController {
+  let state: AppState = opts.initialMode
+    ? { mode: opts.initialMode, inputTarget: opts.initialMode === 'youtube-only' ? 'youtube' : 'terminal' }
+    : INITIAL_STATE
   const subs = new Set<(s: AppState) => void>()
 
   const applyToViews = () => {
