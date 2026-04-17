@@ -1,4 +1,5 @@
 import { mountTerminal } from './terminal'
+import { createModeIndicator } from './modeIndicator'
 
 const root = document.getElementById('terminal-root')
 if (!root) throw new Error('terminal-root missing')
@@ -9,9 +10,11 @@ inner.id = 'terminal-inner'
 root.appendChild(inner)
 
 const { term, fit } = mountTerminal(inner)
+const indicator = createModeIndicator(root)
 
 window.youtermAPI.onPtyData(data => term.write(data))
 term.onData(data => window.youtermAPI.ptyWrite(data))
+window.youtermAPI.onStateChanged(state => indicator.update(state))
 
 const doFit = () => {
   try {
