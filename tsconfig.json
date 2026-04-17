@@ -9,7 +9,6 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "jsx": "preserve",
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["src/shared/*"]
