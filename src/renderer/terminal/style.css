@@ -13,8 +13,9 @@ html, body {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
-  padding: 12px;
+  padding: 12px 12px 24px 12px;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .xterm {
@@ -23,4 +24,26 @@ html, body {
 }
 .xterm-viewport {
   background-color: transparent !important;
+}
+
+/* Hide horizontal scrollbar everywhere */
+*::-webkit-scrollbar:horizontal {
+  display: none;
+  height: 0;
+}
+
+/* Style the vertical scrollbar to be subtle and semi-transparent */
+.xterm-viewport::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+}
+.xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+.xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
