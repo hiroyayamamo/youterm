@@ -1,17 +1,27 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AppState } from '../shared/types'
+import type { AppState, Settings, ColorKey } from '../shared/types'
 
 type StateHandler = (s: AppState) => void
 type DataHandler = (d: string) => void
+type SettingsHandler = (s: Settings) => void
+type VoidHandler = () => void
 
 const stateHandlers = new Set<StateHandler>()
 const dataHandlers = new Set<DataHandler>()
+const settingsHandlers = new Set<SettingsHandler>()
+const panelToggleHandlers = new Set<VoidHandler>()
 
 ipcRenderer.on('state:changed', (_e, state: AppState) => {
   for (const h of stateHandlers) h(state)
 })
 ipcRenderer.on('pty:data', (_e, data: string) => {
   for (const h of dataHandlers) h(data)
+})
+ipcRenderer.on('settings:changed', (_e, s: Settings) => {
+  for (const h of settingsHandlers) h(s)
+})
+ipcRenderer.on('panel:toggle', () => {
+  for (const h of panelToggleHandlers) h()
 })
 
 contextBridge.exposeInMainWorld('youtermAPI', {
@@ -28,5 +38,26 @@ contextBridge.exposeInMainWorld('youtermAPI', {
   },
   ptyResize(size: { cols: number; rows: number }) {
     ipcRenderer.send('pty:resize', size)
+  },
+
+  onSettingsChanged(cb: SettingsHandler) {
+    settingsHandlers.add(cb)
+    return () => settingsHandlers.delete(cb)
+  },
+  onPanelToggle(cb: VoidHandler) {
+    panelToggleHandlers.add(cb)
+    return () => panelToggleHandlers.delete(cb)
+  },
+  settingsGetInitial(): Promise<Settings> {
+    return ipcRenderer.invoke('settings:get-initial')
+  },
+  settingsSetTransparency(value: number) {
+    ipcRenderer.send('settings:set-transparency', value)
+  },
+  settingsSetColor(color: ColorKey) {
+    ipcRenderer.send('settings:set-color', color)
+  },
+  settingsReset() {
+    ipcRenderer.send('settings:reset')
   },
 })
