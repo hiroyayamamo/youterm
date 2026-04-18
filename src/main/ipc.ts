@@ -1,4 +1,4 @@
-import { ipcMain, dialog, Menu, MenuItem, type BrowserWindow, type WebContentsView } from 'electron'
+import { ipcMain, dialog, Menu, MenuItem, BrowserWindow, type WebContentsView } from 'electron'
 import os from 'node:os'
 import { exec } from 'node:child_process'
 import { createRealPtySpawn, type PtyHandle, type PtySpawn } from './pty'
@@ -232,6 +232,132 @@ export function attachSettings(
       ipcMain.removeListener('settings:reset', onReset)
       ipcMain.removeHandler('settings:get-initial')
       broadcastUnsub()
+    },
+  }
+}
+
+// YoutubeBridge: URL tracking + login popup
+const YOUTUBE_NAV_HOSTS = ['youtube.com', 'www.youtube.com', 'm.youtube.com']
+const GOOGLE_AUTH_HOST_RE = /(^|\.)accounts\.google\.com$|(^|\.)myaccount\.google\.com$/i
+
+function isYoutubeNavUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    if (u.protocol !== 'https:') return false
+    return YOUTUBE_NAV_HOSTS.includes(u.hostname)
+  } catch {
+    return false
+  }
+}
+
+function isGoogleAuthUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return GOOGLE_AUTH_HOST_RE.test(u.hostname)
+  } catch {
+    return false
+  }
+}
+
+function isYoutubeHomeUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return YOUTUBE_NAV_HOSTS.includes(u.hostname)
+  } catch {
+    return false
+  }
+}
+
+export interface YoutubeBridge {
+  dispose(): void
+}
+
+export function attachYoutube(
+  win: BrowserWindow,
+  terminalView: WebContentsView,
+  settings: SettingsController,
+): YoutubeBridge {
+  let disposed = false
+  let activeLoginWin: BrowserWindow | null = null
+
+  const onFrameNavigate = (
+    _event: unknown,
+    url: string,
+    _httpResponseCode: number,
+    _httpStatusText: string,
+    isMainFrame: boolean,
+  ) => {
+    if (isMainFrame) return
+    if (!isYoutubeNavUrl(url)) return
+    if (disposed) return
+    settings.dispatch({ type: 'set-youtube-url', url })
+  }
+
+  const onWillFrameNavigate = (event: Electron.Event & { url: string }) => {
+    if (disposed) return
+    const url = event.url
+    if (!isGoogleAuthUrl(url)) return
+    event.preventDefault()
+    openLoginWindow(url)
+  }
+
+  function openLoginWindow(url: string): void {
+    if (activeLoginWin && !activeLoginWin.isDestroyed()) {
+      activeLoginWin.focus()
+      activeLoginWin.webContents.loadURL(url).catch(() => {})
+      return
+    }
+    const terminalSession = terminalView.webContents.session
+    const loginWin = new BrowserWindow({
+      width: 480,
+      height: 640,
+      parent: win,
+      modal: false,
+      autoHideMenuBar: true,
+      title: 'Sign in — youterm',
+      webPreferences: {
+        session: terminalSession,
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    })
+    activeLoginWin = loginWin
+
+    const onLoginNav = (_e: unknown, currentUrl: string) => {
+      if (isYoutubeHomeUrl(currentUrl)) {
+        // Login complete; close popup and reload iframe to pick up new cookies
+        if (!loginWin.isDestroyed()) loginWin.close()
+        if (!terminalView.webContents.isDestroyed()) {
+          terminalView.webContents.send('youtube:reload')
+        }
+      }
+    }
+    loginWin.webContents.on('did-navigate', onLoginNav)
+    loginWin.on('closed', () => {
+      loginWin.webContents.removeListener('did-navigate', onLoginNav)
+      if (activeLoginWin === loginWin) activeLoginWin = null
+    })
+
+    loginWin.loadURL(url).catch(() => {})
+  }
+
+  terminalView.webContents.on('did-frame-navigate', onFrameNavigate)
+  // will-frame-navigate signature: (event, url, isMainFrame, frameProcessId, frameRoutingId)
+  // Use a wrapper that matches Electron's type
+  const onWillFrameNavigateWrapper = (event: Electron.Event) => {
+    // Electron types for will-frame-navigate pass the event only; URL is on event.url
+    onWillFrameNavigate(event as Electron.Event & { url: string })
+  }
+  // Older Electron used 'will-navigate' for same-origin frame nav; prefer 'will-frame-navigate' for all frames
+  terminalView.webContents.on('will-frame-navigate', onWillFrameNavigateWrapper)
+
+  return {
+    dispose() {
+      disposed = true
+      terminalView.webContents.removeListener('did-frame-navigate', onFrameNavigate)
+      terminalView.webContents.removeListener('will-frame-navigate', onWillFrameNavigateWrapper)
+      if (activeLoginWin && !activeLoginWin.isDestroyed()) activeLoginWin.close()
     },
   }
 }

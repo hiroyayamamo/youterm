@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { createMainWindow } from './window'
-import { attachTabs, attachSettings, type TabsBridge, type SettingsBridge } from './ipc'
+import { attachTabs, attachSettings, attachYoutube, type TabsBridge, type SettingsBridge, type YoutubeBridge } from './ipc'
 import { createModeController, type ModeController } from './modeController'
 import { createSettingsController, type SettingsController } from './settingsController'
 import { createRealSettingsStore } from './settingsStore'
@@ -9,6 +9,7 @@ import { installShortcuts } from './shortcuts'
 let bundle: ReturnType<typeof createMainWindow> | undefined
 let tabsBridge: TabsBridge | undefined
 let settingsBridge: SettingsBridge | undefined
+let youtubeBridge: YoutubeBridge | undefined
 let modeCtrl: ModeController | undefined
 let settings: SettingsController | undefined
 
@@ -28,6 +29,7 @@ async function start() {
   })
 
   settingsBridge = attachSettings(bundle.terminalView, settings)
+  youtubeBridge = attachYoutube(bundle.win, bundle.terminalView, settings)
   installShortcuts(bundle, modeCtrl, settings, tabsBridge.tabsController)
 
   app.on('activate', async () => {
@@ -41,6 +43,7 @@ async function start() {
         }
       })
       settingsBridge = attachSettings(bundle.terminalView, settings!)
+      youtubeBridge = attachYoutube(bundle.win, bundle.terminalView, settings!)
       installShortcuts(bundle, modeCtrl, settings!, tabsBridge.tabsController)
     }
   })
@@ -49,6 +52,7 @@ async function start() {
 app.whenReady().then(start)
 
 app.on('window-all-closed', () => {
+  youtubeBridge?.dispose()
   settingsBridge?.dispose()
   tabsBridge?.dispose()
   if (process.platform !== 'darwin') app.quit()
