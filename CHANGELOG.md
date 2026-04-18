@@ -2,6 +2,20 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.10.0] — 2026-04-19
+
+### Added
+- **各タブの cwd(カレントディレクトリ)永続化**
+  - `Tab.cwd: string | null` フィールド追加(tabs.json に保存)
+  - **アプリ終了時(`before-quit`)**: 各タブの zsh プロセスの pid に対して `lsof -a -d cwd -p <pid> -Fn` を実行して現在のカレントディレクトリを取得 → state 更新 → tabs.json に保存(連続ポーリングではなく終了時 1 回のみ、パフォーマンス影響なし)
+  - **アプリ起動時**: 各タブの保存された cwd を zsh spawn 時に使用。ディレクトリが存在しない場合はホームディレクトリにフォールバック
+  - 新規タブは cwd=null で作成されるため、ホームディレクトリで起動(既存挙動維持)
+  - `PtyHandle.getPid()` 追加、`spawnPty` シグネチャを `(tabId, cwd: string \| null)` に変更
+  - `TabsController.captureCwds()` 追加、DI 可能な `getCwdForPid` で fake テスト対応
+  - `set-tab-cwds` reducer action + 4 新規テスト
+
+---
+
 ## [0.9.0] — 2026-04-19
 
 ### Added
