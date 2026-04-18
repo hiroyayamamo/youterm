@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.10.1] — 2026-04-19
+
+### Fixed
+- **v0.10.0 で cwd が永続化されない bug を修正**
+  - 原因: `captureCwds()` が reducer action を dispatch すると、subscribers が `scheduleSave()` で 200ms の debounce タイマーを設定。その直後に `app.quit()` が呼ばれるとプロセスが終了してタイマーが発火せず、`tabs.json` への書き込みが実行されずじまいだった
+  - 対応: `TabsController.flushSave()` を追加、pending タイマーをキャンセルして同期的に `store.save(state)` を実行
+  - `captureCwds()` の末尾で `flushSave()` を呼ぶ → app quit 前に必ずディスク書き込み完了
+  - 通常の runtime での設定変更は従来通り 200ms debounce save(過剰書き込み防止)
+
+---
+
 ## [0.10.0] — 2026-04-19
 
 ### Added
