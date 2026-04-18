@@ -198,4 +198,76 @@ describe('createTabsController', () => {
     ctrl.newTab()
     expect(received).toEqual([2, 3])
   })
+
+  it('loads initial state from store when provided', () => {
+    const factory = makeFakePtyFactory()
+    const store = {
+      load: () => ({
+        tabs: [
+          { id: '5', customName: 'main' },
+          { id: '7', customName: null },
+        ],
+        activeId: '7',
+      }),
+      save: vi.fn(),
+    }
+    const ctrl = createTabsController({
+      spawnPty: tabId => factory.spawn(tabId),
+      hasChildren: async () => false,
+      onDialogConfirm: async () => true,
+      onData: () => {},
+      store,
+    })
+    expect(ctrl.getState().tabs).toHaveLength(2)
+    expect(ctrl.getState().activeId).toBe('7')
+    expect(factory.created).toEqual(['5', '7']) // one pty per restored tab
+  })
+
+  it('next new tab ID continues past the max restored ID', () => {
+    const factory = makeFakePtyFactory()
+    const store = {
+      load: () => ({
+        tabs: [{ id: '5', customName: null }, { id: '9', customName: null }],
+        activeId: '5',
+      }),
+      save: vi.fn(),
+    }
+    const ctrl = createTabsController({
+      spawnPty: tabId => factory.spawn(tabId),
+      hasChildren: async () => false,
+      onDialogConfirm: async () => true,
+      onData: () => {},
+      store,
+    })
+    ctrl.newTab()
+    // New tab ID should be '10' (= max restored 9 + 1)
+    expect(ctrl.getState().tabs.map(t => t.id)).toContain('10')
+  })
+
+  it('debounces store.save on state changes', () => {
+    vi.useFakeTimers()
+    const factory = makeFakePtyFactory()
+    const saveMock = vi.fn()
+    const store = {
+      load: () => ({ tabs: [{ id: '1', customName: null }], activeId: '1' }),
+      save: saveMock,
+    }
+    const ctrl = createTabsController({
+      spawnPty: tabId => factory.spawn(tabId),
+      hasChildren: async () => false,
+      onDialogConfirm: async () => true,
+      onData: () => {},
+      store,
+      debounceMs: 200,
+    })
+    ctrl.newTab()
+    ctrl.renameTab('2', 'test')
+    expect(saveMock).toHaveBeenCalledTimes(0)
+    vi.advanceTimersByTime(199)
+    expect(saveMock).toHaveBeenCalledTimes(0)
+    vi.advanceTimersByTime(1)
+    expect(saveMock).toHaveBeenCalledTimes(1)
+    expect(saveMock.mock.calls[0][0].tabs).toHaveLength(2)
+    vi.useRealTimers()
+  })
 })
