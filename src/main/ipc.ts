@@ -478,7 +478,7 @@ html.youterm-video-fill video.video-stream {
     return s.visibility !== 'hidden' && s.display !== 'none' && parseFloat(s.opacity) > 0
   }
 
-  const findSkipButton = () => {
+  const findExplicitSkipButton = () => {
     const selectors = [
       '.ytp-ad-skip-button-modern',
       '.ytp-ad-skip-button',
@@ -497,43 +497,27 @@ html.youterm-video-fill video.video-stream {
         if (isVisible(el)) return el
       }
     }
-    // Fallback: scan buttons for skip-ad-like attributes
-    const all = document.querySelectorAll('button, div[role="button"], .ytp-ad-skip-button-container')
-    for (const el of all) {
-      if (!isVisible(el)) continue
-      const cls = (el.className || '').toString()
-      const aria = el.getAttribute && (el.getAttribute('aria-label') || '')
-      const text = (el.textContent || '').trim()
-      const tokens = \`\${cls} \${aria} \${text}\`.toLowerCase()
-      // Match English "skip ad" / "skip advertisement" / Japanese "広告をスキップ"
-      if ((tokens.includes('skip') && (tokens.includes('ad') || tokens.includes('advert'))) ||
-          text.includes('広告をスキップ') || aria.includes('広告をスキップ')) {
-        return el
-      }
-    }
     return null
   }
 
   const skipAdIfPresent = () => {
     const player = document.querySelector('#movie_player')
     if (!player) return
+    // Strict ad detection: only YouTube's own state classes on #movie_player
     const isAd = player.classList.contains('ad-showing') ||
-                 player.classList.contains('ad-interrupting') ||
-                 !!document.querySelector('.ad-showing') ||
-                 !!document.querySelector('.ytp-ad-player-overlay') ||
-                 !!document.querySelector('.ytp-ad-module')
+                 player.classList.contains('ad-interrupting')
     if (!isAd) return
-    // Try skip button first (with aggressive click + expanded selectors)
-    const skipBtn = findSkipButton()
+    // Prefer explicit skip button
+    const skipBtn = findExplicitSkipButton()
     if (skipBtn) {
       aggressiveClick(skipBtn)
       return
     }
-    // Fast-forward the video element as last resort
+    // Fast-forward only if no skip button (fallback, same as v0.7.4)
     const video = document.querySelector('video.html5-main-video') ||
                   document.querySelector('video.video-stream') ||
                   document.querySelector('video')
-    if (video && !isNaN(video.duration) && video.duration > 0) {
+    if (video && !isNaN(video.duration) && video.duration > 0 && isFinite(video.duration)) {
       try {
         video.currentTime = video.duration
         video.muted = true
@@ -542,7 +526,7 @@ html.youterm-video-fill video.video-stream {
   }
 
   // Run skip check frequently while ads are showing
-  setInterval(skipAdIfPresent, 100)
+  setInterval(skipAdIfPresent, 250)
 
   // Also observe DOM mutations for class changes
   try {

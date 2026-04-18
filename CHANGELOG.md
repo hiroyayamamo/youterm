@@ -2,6 +2,22 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.7.6] — 2026-04-19
+
+### Fixed
+- **v0.7.5 で動画再生不可・チラつき発生の regression を修正**
+  - 原因:
+    1. 広告検知条件を `.ytp-ad-player-overlay` / `.ytp-ad-module` まで拡張したが、これらの DOM 要素は広告中でなくても存在するため、常時 "広告中" 判定になり `video.currentTime = duration` が連続実行されてチラついた
+    2. フォールバック button スキャンが無関係な UI にマッチしてクリックしてしまう誤爆があった
+    3. interval を 100ms に短縮していたため上記誤爆が増幅
+  - 対応:
+    - 広告検知を `#movie_player.ad-showing` / `.ad-interrupting` クラスの厳密判定のみに戻す
+    - broad な button スキャンのフォールバックを削除、explicit セレクタのみに(class 名マッチを拡張したバージョンは維持)
+    - interval を 250ms に戻す
+  - v0.7.5 で導入した有用な改善(trusted event 発火 `aggressiveClick`、可視性チェック、拡張 explicit セレクタ)は維持
+
+---
+
 ## [0.7.5] — 2026-04-19
 
 ### Fixed
