@@ -2,6 +2,18 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.6.3] — 2026-04-19
+
+### Fixed
+- **Video-Fill が mode 切替で勝手に OFF になる問題を修正**
+  - 以前の挙動: video-fill ON 中に Cmd+2(overlay)を押すと、YouTube が通常 UI(header / sidebar / comments 表示)に戻っていた
+  - 原因: v0.6.1 で「youtube-only モードから離れたら video-fill 自動 OFF」のロジックを追加していたが、ユーザー期待と逆だった
+  - 修正: mode 切替では video-fill を変えない。video-fill 状態は `Cmd+Shift+F`(youtube-only モード時のみ可)でのみトグル
+  - 結果: overlay モード + video-fill ON の場合、chrome-less な YouTube の上に terminal overlay が載る体験になる
+- 併せて `body.video-fill` CSS ルール(terminal overlay を強制非表示)を削除 — mode 固有の CSS が担うべき
+
+---
+
 ## [0.6.2] — 2026-04-19
 
 ### Fixed
