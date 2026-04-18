@@ -31,6 +31,10 @@ async function start() {
     if (state.mode !== settings!.getSettings().lastMode) {
       settings!.dispatch({ type: 'set-last-mode', mode: state.mode })
     }
+    // Auto-disable video-fill when leaving youtube-only mode
+    if (state.mode !== 'youtube-only' && settings!.getSettings().videoFillMode) {
+      settings!.dispatch({ type: 'set-video-fill', value: false })
+    }
   })
 
   settingsBridge = attachSettings(bundle.terminalView, settings)
@@ -45,6 +49,10 @@ async function start() {
       modeCtrl.subscribe(state => {
         if (state.mode !== settings!.getSettings().lastMode) {
           settings!.dispatch({ type: 'set-last-mode', mode: state.mode })
+        }
+        // Auto-disable video-fill when leaving youtube-only mode
+        if (state.mode !== 'youtube-only' && settings!.getSettings().videoFillMode) {
+          settings!.dispatch({ type: 'set-video-fill', value: false })
         }
       })
       settingsBridge = attachSettings(bundle.terminalView, settings!)

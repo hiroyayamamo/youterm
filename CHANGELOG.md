@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.6.1] — 2026-04-19
+
+### Changed
+- **Video-Fill モードを YouTube モード(`youtube-only`)限定に**
+  - `Cmd+Shift+F` は `youtube-only` モード時のみトグル可能(他モードでは no-op)
+  - モードが `youtube-only` から離れた時は `videoFillMode` を自動 OFF
+  - Video-Fill ON 中でも Cmd+1/2/3 によるモード切替は普通に動作
+- **理由**: overlay / terminal-only モード中に Video-Fill を有効にすると、YouTube が非 watch ページにいる場合に画面が白くなる現象が発生するため(動画がないページで CSS 注入がミスマッチを起こす)
+
+---
+
 ## [0.6.0] — 2026-04-19
 
 ### Added
