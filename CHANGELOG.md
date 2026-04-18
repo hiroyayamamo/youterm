@@ -2,6 +2,15 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.12.1] — 2026-04-19
+
+### Changed
+- **タブバーの背景を不透明な純黒に変更**
+  - 以前: `rgba(0, 0, 0, 0.3)` で半透明(後ろの YouTube が透けていた)
+  - 現在: `#000` ソリッド、タブバーがはっきり独立した領域として見える
+
+---
+
 ## [0.12.0] — 2026-04-19
 
 ### Added
