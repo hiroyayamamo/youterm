@@ -180,6 +180,17 @@ export async function attachTabs(
   }
   tabsController.subscribe(broadcastState)
 
+  // Dynamic window title: "Uterm - {active tab name}"
+  const updateWindowTitle = () => {
+    if (win.isDestroyed()) return
+    const s = tabsController.getState()
+    const active = s.tabs.find(t => t.id === s.activeId)
+    const name = active?.customName ?? 'zsh'
+    win.setTitle(`Uterm - ${name}`)
+  }
+  const titleUnsub = tabsController.subscribe(updateWindowTitle)
+  updateWindowTitle() // Initial title
+
   // handlers
   const onNew = () => tabsController.newTab()
   const onClose = async (_e: unknown, arg: unknown) => {
@@ -248,6 +259,7 @@ export async function attachTabs(
   return {
     tabsController,
     dispose() {
+      titleUnsub()
       ipcMain.removeListener('tabs:new', onNew)
       ipcMain.removeListener('tabs:close', onClose)
       ipcMain.removeListener('tabs:activate', onActivate)

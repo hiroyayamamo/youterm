@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.12.0] — 2026-04-19
+
+### Added
+- **ウィンドウタイトル動的変更** — `Uterm - {アクティブタブ名}` を表示
+  - アクティブタブが変わるたび、または rename 時に自動更新
+  - カスタム名未設定のタブは `zsh` を表示(例: `Uterm - zsh`)
+  - カスタム名設定済み(例: "main")は `Uterm - main`
+  - HTML `<title>` の自動同期を `page-title-updated` で preventDefault、main 側が完全に制御
+
+---
+
 ## [0.11.1] — 2026-04-19
 
 ### Fixed

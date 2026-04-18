@@ -17,6 +17,13 @@ export function createMainWindow(): WindowBundle {
     backgroundColor: '#000000',
   })
 
+  // Prevent Electron from auto-syncing window title with HTML <title>;
+  // main process controls title dynamically (e.g., based on active tab).
+  win.webContents.on('page-title-updated', event => {
+    event.preventDefault()
+  })
+  win.setTitle('Uterm')
+
   if (process.env.ELECTRON_RENDERER_URL) {
     win.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
