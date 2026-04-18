@@ -299,9 +299,3 @@ body.mode-terminal-only #youtube-iframe {
   color: rgb(40, 254, 20);
   background: rgba(255, 255, 255, 0.05);
 }
-
-/* Video-fill mode: hide all terminal overlay UI (tab bar, terminal, indicator, panel) */
-body.video-fill #terminal-root,
-body.video-fill #options-panel {
-  display: none !important;
-}
