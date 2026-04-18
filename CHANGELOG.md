@@ -2,6 +2,23 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.5.1] — 2026-04-18
+
+### Added
+- **再生位置の永続化** — 動画の再生中の現在位置(秒)を10秒ごとにポーリングして保存
+  - `webFrameMain.executeJavaScript` で cross-origin iframe 内の `document.querySelector('video').currentTime` を取得
+  - URL の `?t=<秒>` パラメータとして保存、起動時にその秒数から再生再開
+  - `app.on('before-quit')` で終了直前に最終ポーリング実行
+  - `time_continue=` など既存の時刻パラメータは正規化
+
+### Fixed
+- **YouTube のダークモード / シアターモード設定が動作・永続化しない問題**
+  - 原因: Chromium のサードパーティストレージパーティショニングにより、iframe 内の YouTube が `PREF` cookie(ダーク/シアターモード設定を保存)をパーティション化されたストレージ jar に書き込み、session cookie jar には届かなかった
+  - 診断: session には 24 cookie あるのに iframe からは 1 つしか見えず、`PREF` cookie は両方の jar に不在だった
+  - 対応: Chromium flag `--disable-features=ThirdPartyStoragePartitioning,PartitionedCookies` を追加。iframe が session jar と共有アクセスできるようになり、`PREF` cookie が永続化される
+
+---
+
 ## [0.5.0] — 2026-04-18
 
 ### Added
