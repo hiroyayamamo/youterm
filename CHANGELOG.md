@@ -2,6 +2,25 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.6.0] — 2026-04-19
+
+### Added
+- **Video-Fill モード** — YouTube の動画を youterm ウィンドウ全体に最大化表示
+  - `Cmd+Shift+F` でトグル
+  - `Settings.videoFillMode: boolean` 追加、永続化(起動時復元)
+  - YouTube iframe 内に `<style id="youterm-video-fill-style">` を注入(`webFrameMain.executeJavaScript` 経由)
+  - ON 時: ヘッダ / サイドバー / コメント等を `display:none`、`#movie_player` を `position:fixed; inset:0; width:100vw; height:100vh` で最大化
+  - ON 時: Terminal overlay(タブバー含む)と Options panel も `body.video-fill` クラスで非表示
+  - CSS 注入は `did-frame-finish-load` と settings 変更時に idempotent に実行
+  - 他モード(`youtube-only` / `overlay` / `terminal-only`)とは**直交**、OFF で元モードに復帰
+- Application Menu の View サブメニューに "Video Fill" 項目追加
+
+### Notes
+- OS レベルのフルスクリーンではなく「youterm ウィンドウ内部」での最大化なので、ウィンドウリサイズすれば動画サイズも追従
+- ダークモード / シアターモード問題の代替体験として導入(Chromium のストレージパーティショニング起因で標準機能の UI 永続化は不可能だった)
+
+---
+
 ## [0.5.1] — 2026-04-18
 
 ### Added
