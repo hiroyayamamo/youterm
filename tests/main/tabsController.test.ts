@@ -347,6 +347,23 @@ describe('createTabsController', () => {
     vi.useRealTimers()
   })
 
+  it('onSpawn is called for each pty spawn (initial + newTab)', () => {
+    const factory = makeFakePtyFactory()
+    const onSpawn = vi.fn()
+    const ctrl = createTabsController({
+      spawnPty: (tabId, _cwd) => factory.spawn(tabId),
+      hasChildren: async () => false,
+      onDialogConfirm: async () => true,
+      onData: () => {},
+      onSpawn,
+    })
+    // Initial tab
+    expect(onSpawn).toHaveBeenCalledWith('1')
+    ctrl.newTab()
+    expect(onSpawn).toHaveBeenCalledWith('2')
+    expect(onSpawn).toHaveBeenCalledTimes(2)
+  })
+
   it('captureCwds flushes save synchronously', async () => {
     vi.useFakeTimers()
     const factory = makeFakePtyFactory()

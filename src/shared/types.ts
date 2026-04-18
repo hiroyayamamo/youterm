@@ -33,6 +33,7 @@ export interface YoutermAPI {
   tabsActivate(tabId: string): void
   tabsRename(tabId: string, name: string | null): void
   tabsContextMenu(tabId: string, x: number, y: number): void
+  terminalReady(): Promise<void>
 }
 
 export type ColorKey = 'black' | 'dark-gray' | 'dark-blue' | 'dark-green'

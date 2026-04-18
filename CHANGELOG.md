@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.11.1] — 2026-04-19
+
+### Fixed
+- **v0.11.0 のスプラッシュが表示されない問題を修正 + 新規タブでも表示されるように**
+  - 原因1: main が splash を送るタイミングで renderer の `onPtyData` リスナーが未登録 → message が落ちていた
+  - 対応1: `terminal:ready` IPC を追加。renderer が init() 完了時にこれを呼び、main 側で ready になるまで splash を buffer。renderer reload 時(did-start-loading)にも ready フラグをリセットして再送可能に
+  - 原因2: v0.11.0 では初期タブのみ splash、`newTab()` は対象外だった
+  - 対応2: `TabsControllerDeps.onSpawn` コールバックを追加し、tabsController が pty spawn のたびに呼ぶ。これで初期タブも Cmd+T 新規タブも同じ経路で splash 表示
+
+---
+
 ## [0.11.0] — 2026-04-19
 
 ### Added

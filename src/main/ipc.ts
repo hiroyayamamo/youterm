@@ -113,6 +113,42 @@ export async function attachTabs(
     })
   }
 
+  // Startup splash: send ASCII art to each spawned tab, buffered until the
+  // renderer signals it's ready (renderer must register onPtyData before splash arrives).
+  const splash = buildSplash(app.getVersion())
+  let rendererReady = false
+  const pendingSplashTabs: string[] = []
+
+  const flushPendingSplashes = () => {
+    if (terminalView.webContents.isDestroyed()) return
+    for (const tabId of pendingSplashTabs) {
+      terminalView.webContents.send('pty:data', { tabId, data: splash })
+    }
+    pendingSplashTabs.length = 0
+  }
+
+  const sendSplashForTab = (tabId: string) => {
+    if (rendererReady) {
+      if (!terminalView.webContents.isDestroyed()) {
+        terminalView.webContents.send('pty:data', { tabId, data: splash })
+      }
+    } else {
+      pendingSplashTabs.push(tabId)
+    }
+  }
+
+  const handleTerminalReady = () => {
+    rendererReady = true
+    flushPendingSplashes()
+  }
+  ipcMain.handle('terminal:ready', handleTerminalReady)
+
+  // If renderer reloads (e.g., Cmd+Shift+R), reset ready state so new init cycle re-sends splash
+  const onDidStartLoading = () => {
+    rendererReady = false
+  }
+  terminalView.webContents.on('did-start-loading', onDidStartLoading)
+
   const tabsController = createTabsController({
     spawnPty: spawnPtyWithPid,
     hasChildren,
@@ -134,6 +170,7 @@ export async function attachTabs(
     },
     store: tabsStore,
     getCwdForPid,
+    onSpawn: sendSplashForTab,
   })
 
   const broadcastState = () => {
@@ -142,15 +179,6 @@ export async function attachTabs(
     }
   }
   tabsController.subscribe(broadcastState)
-
-  // Startup splash: send ASCII art to each initial tab (restored from tabs.json or freshly initialized).
-  // New tabs created later via `newTab()` do NOT receive this.
-  const splash = buildSplash(app.getVersion())
-  for (const tab of tabsController.getState().tabs) {
-    if (!terminalView.webContents.isDestroyed()) {
-      terminalView.webContents.send('pty:data', { tabId: tab.id, data: splash })
-    }
-  }
 
   // handlers
   const onNew = () => tabsController.newTab()
@@ -228,6 +256,10 @@ export async function attachTabs(
       ipcMain.removeListener('pty:resize', onResize)
       ipcMain.removeListener('tabs:context-menu', onContextMenu)
       ipcMain.removeHandler('tabs:get-initial')
+      ipcMain.removeHandler('terminal:ready')
+      if (!terminalView.webContents.isDestroyed()) {
+        terminalView.webContents.removeListener('did-start-loading', onDidStartLoading)
+      }
       tabsController.disposeAll()
     },
   }

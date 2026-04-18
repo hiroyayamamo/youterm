@@ -11,6 +11,7 @@ export interface TabsControllerDeps {
   hasChildren: (tabId: string) => Promise<boolean>
   onDialogConfirm: () => Promise<boolean>
   onData: (tabId: string, data: string) => void
+  onSpawn?: (tabId: string) => void
   store?: TabsStore
   debounceMs?: number
   getCwdForPid?: (pid: number) => Promise<string | null>
@@ -50,6 +51,7 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
     const pty = deps.spawnPty(tabId, cwd)
     pty.onData(data => deps.onData(tabId, data))
     ptys.set(tabId, pty)
+    deps.onSpawn?.(tabId)
   }
 
   for (const t of state.tabs) spawnFor(t.id)

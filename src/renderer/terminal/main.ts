@@ -233,6 +233,10 @@ async function init(): Promise<void> {
     } catch {}
   })
   observer.observe(termArea)
+
+  // Signal main that renderer is fully initialized and ready to receive pty data
+  // (in particular, the buffered startup splash).
+  try { await window.youtermAPI.terminalReady() } catch {}
 }
 
 init()
