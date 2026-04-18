@@ -4,7 +4,7 @@ import { INITIAL_SETTINGS } from '../../src/shared/types'
 
 describe('validateAndNormalize', () => {
   it('passes through a fully valid Settings object (including blur)', () => {
-    const valid = { transparency: 0.3, bgColor: 'dark-blue', lastMode: 'overlay', blur: 0.5 }
+    const valid = { transparency: 0.3, bgColor: 'dark-blue', lastMode: 'overlay', blur: 0.5, youtubeLastUrl: null }
     expect(validateAndNormalize(valid)).toEqual(valid)
   })
 
@@ -23,6 +23,7 @@ describe('validateAndNormalize', () => {
       bgColor: 'dark-blue',
       lastMode: 'terminal-only',
       blur: 0.4,
+      youtubeLastUrl: null,
     })
   })
 
@@ -33,6 +34,7 @@ describe('validateAndNormalize', () => {
       bgColor: INITIAL_SETTINGS.bgColor,
       lastMode: 'overlay',
       blur: 0.2,
+      youtubeLastUrl: null,
     })
   })
 
@@ -43,6 +45,7 @@ describe('validateAndNormalize', () => {
       bgColor: 'black',
       lastMode: INITIAL_SETTINGS.lastMode,
       blur: 0.2,
+      youtubeLastUrl: null,
     })
   })
 
@@ -53,6 +56,7 @@ describe('validateAndNormalize', () => {
       bgColor: 'dark-green',
       lastMode: 'terminal-only',
       blur: INITIAL_SETTINGS.blur,
+      youtubeLastUrl: null,
     })
   })
 
@@ -63,6 +67,7 @@ describe('validateAndNormalize', () => {
       bgColor: 'black',
       lastMode: 'overlay',
       blur: INITIAL_SETTINGS.blur,
+      youtubeLastUrl: null,
     })
   })
 
@@ -73,6 +78,32 @@ describe('validateAndNormalize', () => {
       bgColor: 'black',
       lastMode: 'overlay',
       blur: 0.3,
+      youtubeLastUrl: null,
     })
+  })
+
+  it('accepts a valid youtube URL as youtubeLastUrl', () => {
+    const raw = { transparency: 0.5, bgColor: 'black', lastMode: 'overlay', blur: 0.1, youtubeLastUrl: 'https://www.youtube.com/watch?v=abc' }
+    expect(validateAndNormalize(raw)).toEqual(raw)
+  })
+
+  it('defaults youtubeLastUrl to null when missing', () => {
+    const raw = { transparency: 0.5, bgColor: 'black', lastMode: 'overlay', blur: 0.1 }
+    expect(validateAndNormalize(raw)).toEqual({ ...raw, youtubeLastUrl: null })
+  })
+
+  it('defaults youtubeLastUrl to null when not a YouTube URL', () => {
+    const raw = { transparency: 0.5, bgColor: 'black', lastMode: 'overlay', blur: 0.1, youtubeLastUrl: 'https://example.com/evil' }
+    expect(validateAndNormalize(raw)).toEqual({ ...raw, youtubeLastUrl: null })
+  })
+
+  it('defaults youtubeLastUrl to null when not a string', () => {
+    const raw = { transparency: 0.5, bgColor: 'black', lastMode: 'overlay', blur: 0.1, youtubeLastUrl: 42 }
+    expect(validateAndNormalize(raw)).toEqual({ ...raw, youtubeLastUrl: null })
+  })
+
+  it('accepts youtu.be short URL', () => {
+    const raw = { transparency: 0.5, bgColor: 'black', lastMode: 'overlay', blur: 0.1, youtubeLastUrl: 'https://youtu.be/abc123' }
+    expect(validateAndNormalize(raw)).toEqual(raw)
   })
 })
