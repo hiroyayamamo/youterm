@@ -8,6 +8,7 @@ export type SettingsAction =
   | { type: 'set-blur'; value: number }
   | { type: 'set-youtube-url'; url: string | null }
   | { type: 'set-video-fill'; value: boolean }
+  | { type: 'set-ad-block'; value: boolean }
   | { type: 'reset' }
 
 const clamp = (n: number, min: number, max: number): number =>
@@ -41,6 +42,10 @@ export function transitionSettings(state: Settings, action: SettingsAction): Set
       if (state.videoFillMode === action.value) return state
       return { ...state, videoFillMode: action.value }
     }
+    case 'set-ad-block': {
+      if (state.adBlockEnabled === action.value) return state
+      return { ...state, adBlockEnabled: action.value }
+    }
     case 'reset': {
       if (
         state.transparency === INITIAL_SETTINGS.transparency &&
@@ -48,7 +53,8 @@ export function transitionSettings(state: Settings, action: SettingsAction): Set
         state.lastMode === INITIAL_SETTINGS.lastMode &&
         state.blur === INITIAL_SETTINGS.blur &&
         state.youtubeLastUrl === INITIAL_SETTINGS.youtubeLastUrl &&
-        state.videoFillMode === INITIAL_SETTINGS.videoFillMode
+        state.videoFillMode === INITIAL_SETTINGS.videoFillMode &&
+        state.adBlockEnabled === INITIAL_SETTINGS.adBlockEnabled
       ) {
         return INITIAL_SETTINGS
       }

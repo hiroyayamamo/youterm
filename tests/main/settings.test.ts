@@ -66,7 +66,7 @@ describe('transitionSettings', () => {
 
   describe('reset', () => {
     it('returns INITIAL_SETTINGS regardless of current state', () => {
-      const current: Settings = { transparency: 0.1, bgColor: 'dark-green', lastMode: 'youtube-only', blur: 0.5, youtubeLastUrl: 'https://www.youtube.com/watch?v=abc', videoFillMode: true }
+      const current: Settings = { transparency: 0.1, bgColor: 'dark-green', lastMode: 'youtube-only', blur: 0.5, youtubeLastUrl: 'https://www.youtube.com/watch?v=abc', videoFillMode: true, adBlockEnabled: false }
       const next = transitionSettings(current, { type: 'reset' })
       expect(next).toEqual(INITIAL_SETTINGS)
     })
@@ -104,6 +104,22 @@ describe('transitionSettings', () => {
     })
     it('returns same reference when value already equals current', () => {
       const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-video-fill', value: false })
+      expect(next).toBe(INITIAL_SETTINGS)
+    })
+  })
+
+  describe('set-ad-block', () => {
+    it('enables ad block', () => {
+      const prev: Settings = { ...INITIAL_SETTINGS, adBlockEnabled: false }
+      const next = transitionSettings(prev, { type: 'set-ad-block', value: true })
+      expect(next.adBlockEnabled).toBe(true)
+    })
+    it('disables ad block', () => {
+      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-ad-block', value: false })
+      expect(next.adBlockEnabled).toBe(false)
+    })
+    it('returns same reference when value already equals current', () => {
+      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-ad-block', value: true })
       expect(next).toBe(INITIAL_SETTINGS)
     })
   })
