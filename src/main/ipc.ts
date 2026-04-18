@@ -397,7 +397,7 @@ html.youterm-video-fill video.video-stream {
   if (window.__youtermAdStripInstalled) return
   window.__youtermAdStripInstalled = true
 
-  const AD_FIELDS = ['playerAds', 'adPlacements', 'adSlots', 'adBreakHeartbeatParams']
+  const AD_FIELDS = ['playerAds', 'adPlacements', 'adSlots', 'adBreakHeartbeatParams', 'adBreakParams']
   const stripAds = (obj) => {
     if (!obj || typeof obj !== 'object') return obj
     for (const f of AD_FIELDS) { if (f in obj) delete obj[f] }
@@ -433,7 +433,6 @@ html.youterm-video-fill video.video-stream {
     })
   }
 
-  // XHR path (older YouTube code may use this)
   const origOpen = XMLHttpRequest.prototype.open
   XMLHttpRequest.prototype.open = function(method, url, ...rest) {
     this.__youtermUrl = url
@@ -455,6 +454,58 @@ html.youterm-video-fill video.video-stream {
     }
     return origSend.apply(this, args)
   }
+
+  // DOM-level ad skip: detect #movie_player.ad-showing and skip via button or fast-forward
+  const skipAdIfPresent = () => {
+    const player = document.querySelector('#movie_player')
+    if (!player) return
+    const isAd = player.classList.contains('ad-showing') ||
+                 player.classList.contains('ad-interrupting')
+    if (!isAd) return
+    // Try skip button first
+    const skipSelectors = [
+      '.ytp-ad-skip-button-modern',
+      '.ytp-ad-skip-button',
+      '.ytp-skip-ad-button',
+      'button[class*="ytp-skip-ad"]',
+      'button[class*="ytp-ad-skip"]',
+    ]
+    for (const sel of skipSelectors) {
+      const btn = document.querySelector(sel)
+      if (btn) {
+        try { btn.click() } catch {}
+        return
+      }
+    }
+    // Fast-forward the video element
+    const video = document.querySelector('video.html5-main-video') ||
+                  document.querySelector('video.video-stream') ||
+                  document.querySelector('video')
+    if (video && !isNaN(video.duration) && video.duration > 0) {
+      try {
+        video.currentTime = video.duration
+        video.muted = true
+      } catch {}
+    }
+  }
+
+  // Run skip check frequently while ads are showing
+  setInterval(skipAdIfPresent, 250)
+
+  // Also observe DOM mutations for class changes
+  try {
+    const observer = new MutationObserver(skipAdIfPresent)
+    const startObserving = () => {
+      const player = document.querySelector('#movie_player')
+      if (player) {
+        observer.observe(player, { attributes: true, attributeFilter: ['class'] })
+      } else {
+        // Retry until player exists
+        setTimeout(startObserving, 500)
+      }
+    }
+    startObserving()
+  } catch {}
 })()
 `.trim()
 

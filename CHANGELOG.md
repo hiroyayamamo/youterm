@@ -2,6 +2,20 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.7.4] — 2026-04-19
+
+### Fixed
+- **広告ブロックの安定性を向上(DOM-level 自動スキップ追加)**
+  - network 層のブロックでは YouTube の初期 HTML 埋め込み `ytInitialPlayerResponse` や SSAI(動画ストリーム直接挿入)の広告を捕捉できず、広告が出る/出ないが不安定だった
+  - 対応: 既存の AD_STRIP_SCRIPT に DOM 監視 + 自動スキップロジックを追加
+    - `#movie_player` に `ad-showing` / `ad-interrupting` クラスが付いたら検知
+    - 優先度1: 「スキップ」ボタン(`ytp-ad-skip-button-modern` 等のセレクタ)をクリック
+    - 優先度2: `<video>` 要素の `currentTime = duration` で広告末尾まで瞬時ジャンプ + ミュート
+  - 250ms ごとの interval + MutationObserver の両方で検知(再生開始直後の検知遅延を最小化)
+  - 4 層防御(network filter / CDP Fetch intercept / CDP script inject / DOM skip)の最終レイヤーとして機能
+
+---
+
 ## [0.7.3] — 2026-04-19
 
 ### Fixed
