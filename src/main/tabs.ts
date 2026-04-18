@@ -5,11 +5,12 @@ export type TabsAction =
   | { type: 'close-tab'; id: string }
   | { type: 'activate-tab'; id: string }
   | { type: 'rename-tab'; id: string; name: string | null }
+  | { type: 'set-tab-cwds'; cwds: Record<string, string> }
 
 export function transitionTabs(state: TabsState, action: TabsAction): TabsState {
   switch (action.type) {
     case 'new-tab': {
-      const newTab: Tab = { id: action.id, customName: null }
+      const newTab: Tab = { id: action.id, customName: null, cwd: null }
       return {
         tabs: [...state.tabs, newTab],
         activeId: action.id,
@@ -39,6 +40,18 @@ export function transitionTabs(state: TabsState, action: TabsAction): TabsState 
         t.id === action.id ? { ...t, customName: action.name } : t,
       )
       return { ...state, tabs: nextTabs }
+    }
+    case 'set-tab-cwds': {
+      let changed = false
+      const updated = state.tabs.map(t => {
+        const next = action.cwds[t.id]
+        if (next === undefined) return t
+        if (next === t.cwd) return t
+        changed = true
+        return { ...t, cwd: next }
+      })
+      if (!changed) return state
+      return { ...state, tabs: updated }
     }
   }
 }

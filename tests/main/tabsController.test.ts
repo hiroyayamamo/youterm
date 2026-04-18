@@ -204,8 +204,8 @@ describe('createTabsController', () => {
     const store = {
       load: () => ({
         tabs: [
-          { id: '5', customName: 'main' },
-          { id: '7', customName: null },
+          { id: '5', customName: 'main', cwd: null },
+          { id: '7', customName: null, cwd: null },
         ],
         activeId: '7',
       }),
@@ -227,7 +227,7 @@ describe('createTabsController', () => {
     const factory = makeFakePtyFactory()
     const store = {
       load: () => ({
-        tabs: [{ id: '5', customName: null }, { id: '9', customName: null }],
+        tabs: [{ id: '5', customName: null, cwd: null }, { id: '9', customName: null, cwd: null }],
         activeId: '5',
       }),
       save: vi.fn(),
@@ -249,7 +249,7 @@ describe('createTabsController', () => {
     const factory = makeFakePtyFactory()
     const saveMock = vi.fn()
     const store = {
-      load: () => ({ tabs: [{ id: '1', customName: null }], activeId: '1' }),
+      load: () => ({ tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' }),
       save: saveMock,
     }
     const ctrl = createTabsController({

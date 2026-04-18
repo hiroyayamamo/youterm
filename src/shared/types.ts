@@ -67,6 +67,7 @@ export const COLOR_VALUES: Record<ColorKey, { r: number; g: number; b: number }>
 export interface Tab {
   id: string
   customName: string | null
+  cwd: string | null
 }
 
 export interface TabsState {
@@ -75,7 +76,7 @@ export interface TabsState {
 }
 
 export const INITIAL_TABS_STATE: TabsState = {
-  tabs: [{ id: '1', customName: null }],
+  tabs: [{ id: '1', customName: null, cwd: null }],
   activeId: '1',
 }
 

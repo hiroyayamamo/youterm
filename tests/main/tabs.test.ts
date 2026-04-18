@@ -8,7 +8,7 @@ describe('transitionTabs', () => {
     it('appends a new tab with given id', () => {
       const next = transitionTabs(INITIAL_TABS_STATE, { type: 'new-tab', id: '2' })
       expect(next.tabs).toHaveLength(2)
-      expect(next.tabs[1]).toEqual({ id: '2', customName: null })
+      expect(next.tabs[1]).toEqual({ id: '2', customName: null, cwd: null })
     })
     it('activates the new tab', () => {
       const next = transitionTabs(INITIAL_TABS_STATE, { type: 'new-tab', id: '2' })
@@ -19,15 +19,15 @@ describe('transitionTabs', () => {
   describe('close-tab', () => {
     it('removes the tab', () => {
       const s: TabsState = {
-        tabs: [{ id: '1', customName: null }, { id: '2', customName: null }],
+        tabs: [{ id: '1', customName: null, cwd: null }, { id: '2', customName: null, cwd: null }],
         activeId: '2',
       }
       const next = transitionTabs(s, { type: 'close-tab', id: '2' })
-      expect(next.tabs).toEqual([{ id: '1', customName: null }])
+      expect(next.tabs).toEqual([{ id: '1', customName: null, cwd: null }])
     })
     it('activates the previous tab when closing the active one', () => {
       const s: TabsState = {
-        tabs: [{ id: '1', customName: null }, { id: '2', customName: null }, { id: '3', customName: null }],
+        tabs: [{ id: '1', customName: null, cwd: null }, { id: '2', customName: null, cwd: null }, { id: '3', customName: null, cwd: null }],
         activeId: '2',
       }
       const next = transitionTabs(s, { type: 'close-tab', id: '2' })
@@ -35,7 +35,7 @@ describe('transitionTabs', () => {
     })
     it('activates the next tab when closing the first active tab', () => {
       const s: TabsState = {
-        tabs: [{ id: '1', customName: null }, { id: '2', customName: null }],
+        tabs: [{ id: '1', customName: null, cwd: null }, { id: '2', customName: null, cwd: null }],
         activeId: '1',
       }
       const next = transitionTabs(s, { type: 'close-tab', id: '1' })
@@ -43,14 +43,14 @@ describe('transitionTabs', () => {
     })
     it('keeps active when closing a non-active tab', () => {
       const s: TabsState = {
-        tabs: [{ id: '1', customName: null }, { id: '2', customName: null }],
+        tabs: [{ id: '1', customName: null, cwd: null }, { id: '2', customName: null, cwd: null }],
         activeId: '2',
       }
       const next = transitionTabs(s, { type: 'close-tab', id: '1' })
       expect(next.activeId).toBe('2')
     })
     it('returns same reference when closing only tab', () => {
-      const s: TabsState = { tabs: [{ id: '1', customName: null }], activeId: '1' }
+      const s: TabsState = { tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' }
       const next = transitionTabs(s, { type: 'close-tab', id: '1' })
       expect(next).toBe(s)
     })
@@ -63,7 +63,7 @@ describe('transitionTabs', () => {
   describe('activate-tab', () => {
     it('changes activeId', () => {
       const s: TabsState = {
-        tabs: [{ id: '1', customName: null }, { id: '2', customName: null }],
+        tabs: [{ id: '1', customName: null, cwd: null }, { id: '2', customName: null, cwd: null }],
         activeId: '1',
       }
       const next = transitionTabs(s, { type: 'activate-tab', id: '2' })
@@ -85,13 +85,68 @@ describe('transitionTabs', () => {
       expect(next.tabs[0].customName).toBe('main')
     })
     it('clears customName when name is null', () => {
-      const s: TabsState = { tabs: [{ id: '1', customName: 'old' }], activeId: '1' }
+      const s: TabsState = { tabs: [{ id: '1', customName: 'old', cwd: null }], activeId: '1' }
       const next = transitionTabs(s, { type: 'rename-tab', id: '1', name: null })
       expect(next.tabs[0].customName).toBeNull()
     })
     it('returns same reference when renaming to the same value', () => {
-      const s: TabsState = { tabs: [{ id: '1', customName: 'foo' }], activeId: '1' }
+      const s: TabsState = { tabs: [{ id: '1', customName: 'foo', cwd: null }], activeId: '1' }
       const next = transitionTabs(s, { type: 'rename-tab', id: '1', name: 'foo' })
+      expect(next).toBe(s)
+    })
+  })
+
+  describe('set-tab-cwds', () => {
+    it('sets cwd for matching tabs', () => {
+      const s: TabsState = {
+        tabs: [
+          { id: '1', customName: null, cwd: null },
+          { id: '2', customName: null, cwd: null },
+        ],
+        activeId: '1',
+      }
+      const next = transitionTabs(s, {
+        type: 'set-tab-cwds',
+        cwds: { '1': '/Users/foo', '2': '/tmp' },
+      })
+      expect(next.tabs[0].cwd).toBe('/Users/foo')
+      expect(next.tabs[1].cwd).toBe('/tmp')
+    })
+
+    it('skips tabs not in cwds map', () => {
+      const s: TabsState = {
+        tabs: [
+          { id: '1', customName: null, cwd: '/existing' },
+          { id: '2', customName: null, cwd: null },
+        ],
+        activeId: '1',
+      }
+      const next = transitionTabs(s, {
+        type: 'set-tab-cwds',
+        cwds: { '2': '/tmp' },
+      })
+      expect(next.tabs[0].cwd).toBe('/existing')
+      expect(next.tabs[1].cwd).toBe('/tmp')
+    })
+
+    it('returns same reference when no changes', () => {
+      const s: TabsState = {
+        tabs: [{ id: '1', customName: null, cwd: '/foo' }],
+        activeId: '1',
+      }
+      const next = transitionTabs(s, {
+        type: 'set-tab-cwds',
+        cwds: { '1': '/foo' },
+      })
+      expect(next).toBe(s)
+    })
+
+    it('returns same reference when cwds map is empty', () => {
+      const s: TabsState = {
+        tabs: [{ id: '1', customName: null, cwd: null }],
+        activeId: '1',
+      }
+      const next = transitionTabs(s, { type: 'set-tab-cwds', cwds: {} })
       expect(next).toBe(s)
     })
   })
