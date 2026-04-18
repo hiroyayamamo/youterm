@@ -27,6 +27,7 @@ export interface TabsController {
   subscribe(cb: (s: TabsState) => void): () => void
   disposeAll(): void
   captureCwds(): Promise<void>
+  flushSave(): void
 }
 
 export function createTabsController(deps: TabsControllerDeps): TabsController {
@@ -62,6 +63,15 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
     }, debounceMs)
   }
 
+  const flushSave = () => {
+    if (!deps.store) return
+    if (saveTimer) {
+      clearTimeout(saveTimer)
+      saveTimer = null
+    }
+    deps.store.save(state)
+  }
+
   const apply = (action: TabsAction) => {
     const next = transitionTabs(state, action)
     if (next === state) return
@@ -89,6 +99,7 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
     if (Object.keys(cwds).length > 0) {
       apply({ type: 'set-tab-cwds', cwds })
     }
+    flushSave()  // bypass debounce — ensure tabs.json is written before app exits
   }
 
   return {
@@ -137,5 +148,6 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
       ptys.clear()
     },
     captureCwds,
+    flushSave,
   }
 }

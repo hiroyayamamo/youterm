@@ -318,4 +318,58 @@ describe('createTabsController', () => {
     expect(saveMock.mock.calls[0][0].tabs).toHaveLength(2)
     vi.useRealTimers()
   })
+
+  it('flushSave cancels pending timer and writes immediately', () => {
+    vi.useFakeTimers()
+    const factory = makeFakePtyFactory()
+    const saveMock = vi.fn()
+    const store = {
+      load: () => ({ tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' }),
+      save: saveMock,
+    }
+    const ctrl = createTabsController({
+      spawnPty: (tabId, _cwd) => factory.spawn(tabId),
+      hasChildren: async () => false,
+      onDialogConfirm: async () => true,
+      onData: () => {},
+      store,
+      debounceMs: 200,
+    })
+    ctrl.newTab()
+    // debounce timer set, but not fired yet
+    expect(saveMock).toHaveBeenCalledTimes(0)
+    ctrl.flushSave()
+    // flushed immediately
+    expect(saveMock).toHaveBeenCalledTimes(1)
+    // No additional save when timer would have fired
+    vi.advanceTimersByTime(500)
+    expect(saveMock).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  it('captureCwds flushes save synchronously', async () => {
+    vi.useFakeTimers()
+    const factory = makeFakePtyFactory()
+    const saveMock = vi.fn()
+    const getCwdForPid = vi.fn(async () => '/home/test')
+    const store = {
+      load: () => ({ tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' }),
+      save: saveMock,
+    }
+    const ctrl = createTabsController({
+      spawnPty: (tabId, _cwd) => factory.spawn(tabId),
+      hasChildren: async () => false,
+      onDialogConfirm: async () => true,
+      onData: () => {},
+      getCwdForPid,
+      store,
+      debounceMs: 200,
+    })
+    await ctrl.captureCwds()
+    // Must have saved without advancing timer
+    expect(saveMock).toHaveBeenCalledTimes(1)
+    const savedState = saveMock.mock.calls[0][0]
+    expect(savedState.tabs[0].cwd).toBe('/home/test')
+    vi.useRealTimers()
+  })
 })
