@@ -2,6 +2,21 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.7.5] — 2026-04-19
+
+### Fixed
+- **「広告をスキップ」ボタンが表示された時の自動クリックが効かない問題を修正**
+  - 原因: セレクタ不足(YouTube UI のバージョン差で class 名が変化)+ `element.click()` が YouTube 側で trusted event と見なされず無視されるケースがあった
+  - 対応:
+    - セレクタを大幅拡張(modern/legacy/container 各種の button class + `aria-label` 一致)
+    - フォールバック: 全 button + `div[role="button"]` をスキャンし、class / aria-label / textContent に "skip" + "ad" または "広告をスキップ" が含まれるものをクリック
+    - クリック方式を `.click()` 単独から、`pointerdown → mousedown → pointerup → mouseup → click` の連続 dispatch に変更(trusted event の判定を通りやすくする)
+    - クリック前に `offsetParent` / `visibility` / `display` / `opacity` で可視確認
+    - 広告検知条件も拡張:`.ytp-ad-player-overlay` / `.ytp-ad-module` の存在も判定材料に
+  - interval を 250ms → 100ms に短縮してレスポンス向上
+
+---
+
 ## [0.7.4] — 2026-04-19
 
 ### Fixed
