@@ -1,4 +1,4 @@
-import { ipcMain, dialog, Menu, MenuItem, BrowserWindow, type WebContentsView } from 'electron'
+import { app, ipcMain, dialog, Menu, MenuItem, BrowserWindow, type WebContentsView } from 'electron'
 import os from 'node:os'
 import fs from 'node:fs'
 import { exec } from 'node:child_process'
@@ -8,6 +8,7 @@ import { createTabsController } from './tabsController'
 import { createRealTabsStore } from './tabsStore'
 import type { SettingsController } from './settingsController'
 import { createAdBlockController } from './adBlock'
+import { buildSplash } from './splash'
 import type { Settings, ColorKey } from '../shared/types'
 
 const VALID_COLORS: ColorKey[] = ['black', 'dark-gray', 'dark-blue', 'dark-green']
@@ -141,6 +142,15 @@ export async function attachTabs(
     }
   }
   tabsController.subscribe(broadcastState)
+
+  // Startup splash: send ASCII art to each initial tab (restored from tabs.json or freshly initialized).
+  // New tabs created later via `newTab()` do NOT receive this.
+  const splash = buildSplash(app.getVersion())
+  for (const tab of tabsController.getState().tabs) {
+    if (!terminalView.webContents.isDestroyed()) {
+      terminalView.webContents.send('pty:data', { tabId: tab.id, data: splash })
+    }
+  }
 
   // handlers
   const onNew = () => tabsController.newTab()

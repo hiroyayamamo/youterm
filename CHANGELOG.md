@@ -2,6 +2,20 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.11.0] — 2026-04-19
+
+### Added
+- **起動時のスプラッシュ画面** — アプリ起動時、各初期タブに ASCII アートで "youterm" + バージョン + "by Hiroya Yamamoto" を表示
+  - 色付き(緑 rgb(40,254,20) + シアン rgb(0,221,255))、xterm の真カラー ANSI エスケープで描画
+  - 新規タブ(Cmd+T)は対象外 — 純粋な zsh プロンプトのみ
+  - バージョンは `app.getVersion()` で package.json から動的取得
+  - `src/main/splash.ts` に `buildSplash(version)` として実装
+
+### Changed
+- `package.json` のバージョンを `0.10.0` から `0.11.0` に更新
+
+---
+
 ## [0.10.1] — 2026-04-19
 
 ### Fixed
