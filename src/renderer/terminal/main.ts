@@ -58,6 +58,10 @@ async function init(): Promise<void> {
     console.error('[renderer] failed to load initial settings:', err)
   }
 
+  if (initialSettings) {
+    document.body.classList.toggle('video-fill', initialSettings.videoFillMode)
+  }
+
   // Set iframe initial src from persisted URL (or homepage if none)
   {
     const iframe = document.getElementById('youtube-iframe') as HTMLIFrameElement | null
@@ -162,6 +166,7 @@ async function init(): Promise<void> {
   window.youtermAPI.onSettingsChanged(s => {
     applySettingsToCSS(s)
     panel.updateSettings(s)
+    document.body.classList.toggle('video-fill', s.videoFillMode)
   })
 
   window.youtermAPI.onPanelToggle(() => panelCtrl.toggle())
