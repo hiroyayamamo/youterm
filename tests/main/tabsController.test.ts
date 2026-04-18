@@ -245,6 +245,53 @@ describe('createTabsController', () => {
     expect(ctrl.getState().tabs.map(t => t.id)).toContain('10')
   })
 
+  it('captureCwds uses getCwdForPid to update tab cwds', async () => {
+    const factory = makeFakePtyFactory()
+    const getCwdForPid = vi.fn(async (pid: number) => '/mocked/' + pid)
+    const store = {
+      load: () => ({ tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' }),
+      save: vi.fn(),
+    }
+    const ctrl = createTabsController({
+      spawnPty: (tabId, _cwd) => factory.spawn(tabId),
+      hasChildren: async () => false,
+      onDialogConfirm: async () => true,
+      onData: () => {},
+      getCwdForPid,
+      store,
+    })
+    await ctrl.captureCwds()
+    // pid used by factory is parseInt(tabId) + 1000 → tab 1 → pid 1001 → cwd /mocked/1001
+    expect(ctrl.getState().tabs[0].cwd).toBe('/mocked/1001')
+    expect(getCwdForPid).toHaveBeenCalledWith(1001)
+  })
+
+  it('captureCwds is a no-op when getCwdForPid is not provided', async () => {
+    const factory = makeFakePtyFactory()
+    const ctrl = createTabsController({
+      spawnPty: (tabId, _cwd) => factory.spawn(tabId),
+      hasChildren: async () => false,
+      onDialogConfirm: async () => true,
+      onData: () => {},
+    })
+    await ctrl.captureCwds()
+    expect(ctrl.getState().tabs[0].cwd).toBe(null)
+  })
+
+  it('captureCwds skips tabs where getCwdForPid returns null', async () => {
+    const factory = makeFakePtyFactory()
+    const getCwdForPid = vi.fn(async () => null)
+    const ctrl = createTabsController({
+      spawnPty: (tabId, _cwd) => factory.spawn(tabId),
+      hasChildren: async () => false,
+      onDialogConfirm: async () => true,
+      onData: () => {},
+      getCwdForPid,
+    })
+    await ctrl.captureCwds()
+    expect(ctrl.getState().tabs[0].cwd).toBe(null)
+  })
+
   it('debounces store.save on state changes', () => {
     vi.useFakeTimers()
     const factory = makeFakePtyFactory()

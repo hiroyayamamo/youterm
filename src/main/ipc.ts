@@ -79,6 +79,24 @@ export async function attachTabs(
     }
   }
 
+  const getCwdForPid = (pid: number): Promise<string | null> => {
+    return new Promise(resolve => {
+      exec(`lsof -a -d cwd -p ${pid} -Fn`, (err, stdout) => {
+        if (err) { resolve(null); return }
+        // lsof -Fn output format:
+        //   p<pid>
+        //   f<fd-num>
+        //   n<path>
+        const match = stdout.match(/^n(.+)$/m)
+        if (match && match[1]) {
+          resolve(match[1].trim())
+        } else {
+          resolve(null)
+        }
+      })
+    })
+  }
+
   const hasChildren = (tabId: string): Promise<boolean> => {
     const pid = pidByTab.get(tabId)
     if (!pid) return Promise.resolve(false)
@@ -114,6 +132,7 @@ export async function attachTabs(
       }
     },
     store: tabsStore,
+    getCwdForPid,
   })
 
   const broadcastState = () => {
