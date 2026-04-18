@@ -40,6 +40,30 @@ export function installShortcuts(
     if (result === 'close-window') bundle.win.close()
   }
 
+  const toggleVideoPlayback = async () => {
+    const tv = bundle.terminalView
+    if (tv.webContents.isDestroyed()) return
+    const frames = tv.webContents.mainFrame.frames
+    for (const frame of frames) {
+      if (frame.url && /^https:\/\/(?:[a-z0-9-]+\.)*youtube\.com/i.test(frame.url)) {
+        try {
+          await frame.executeJavaScript(`(() => {
+            const v = document.querySelector('video.html5-main-video') ||
+                      document.querySelector('video.video-stream') ||
+                      document.querySelector('video')
+            if (!v) return
+            if (v.paused) {
+              v.play().catch(() => {})
+            } else {
+              v.pause()
+            }
+          })()`)
+        } catch {}
+        break
+      }
+    }
+  }
+
   const template: MenuItemConstructorOptions[] = [
     {
       label: 'youterm',
@@ -99,6 +123,12 @@ export function installShortcuts(
     {
       label: 'View',
       submenu: [
+        {
+          label: 'Play/Pause Video',
+          accelerator: 'Cmd+K',
+          click: () => { void toggleVideoPlayback() },
+        },
+        { type: 'separator' },
         {
           label: 'Video Fill',
           accelerator: 'Cmd+Shift+F',

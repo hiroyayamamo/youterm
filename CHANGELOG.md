@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.9.0] — 2026-04-19
+
+### Added
+- **動画の再生/一時停止トグル(Cmd+K)**
+  - どのモード(youtube-only / overlay / terminal-only)・どの入力先でも動作
+  - main プロセスから `webFrameMain.executeJavaScript` で YouTube iframe 内の `<video>` 要素に対して `paused ? play() : pause()` を実行
+  - Application Menu の View サブメニュー先頭に "Play/Pause Video" 項目として追加
+
+---
+
 ## [0.8.0] — 2026-04-19
 
 ### Added
