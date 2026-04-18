@@ -13,6 +13,7 @@ export interface TabsControllerDeps {
   onData: (tabId: string, data: string) => void
   store?: TabsStore
   debounceMs?: number
+  getCwdForPid?: (pid: number) => Promise<string | null>
 }
 
 export interface TabsController {
@@ -25,6 +26,7 @@ export interface TabsController {
   resize(tabId: string, cols: number, rows: number): void
   subscribe(cb: (s: TabsState) => void): () => void
   disposeAll(): void
+  captureCwds(): Promise<void>
 }
 
 export function createTabsController(deps: TabsControllerDeps): TabsController {
@@ -66,6 +68,27 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
     state = next
     for (const cb of subs) cb(state)
     scheduleSave()
+  }
+
+  const captureCwds = async (): Promise<void> => {
+    const getter = deps.getCwdForPid
+    if (!getter) return
+    const cwds: Record<string, string> = {}
+    for (const tab of state.tabs) {
+      const pty = ptys.get(tab.id)
+      if (!pty) continue
+      const pid = pty.getPid()
+      if (pid === null) continue
+      try {
+        const cwd = await getter(pid)
+        if (typeof cwd === 'string' && cwd.length > 0) {
+          cwds[tab.id] = cwd
+        }
+      } catch {}
+    }
+    if (Object.keys(cwds).length > 0) {
+      apply({ type: 'set-tab-cwds', cwds })
+    }
   }
 
   return {
@@ -113,5 +136,6 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
       for (const pty of ptys.values()) pty.kill()
       ptys.clear()
     },
+    captureCwds,
   }
 }

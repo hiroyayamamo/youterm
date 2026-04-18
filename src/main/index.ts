@@ -66,11 +66,15 @@ app.on('window-all-closed', () => {
 let quitting = false
 app.on('before-quit', async event => {
   if (quitting) return
-  if (!youtubeBridge) return
+  const hasWork = !!youtubeBridge || !!tabsBridge
+  if (!hasWork) return
   event.preventDefault()
   quitting = true
   try {
-    await youtubeBridge.flushPlayback()
+    if (tabsBridge) await tabsBridge.tabsController.captureCwds()
+  } catch {}
+  try {
+    if (youtubeBridge) await youtubeBridge.flushPlayback()
   } catch {}
   app.quit()
 })
