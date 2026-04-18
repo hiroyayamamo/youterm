@@ -2,6 +2,15 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.6.4] — 2026-04-19
+
+### Removed
+- **モードインジケータ UI 削除** — タブバー右端に表示していた "OVERLAY · terminal" 等のラベルは不要になったので撤去
+  - `src/renderer/terminal/modeIndicator.ts` 削除
+  - 関連 import / 呼び出し / CSS を一括削除
+
+---
+
 ## [0.6.3] — 2026-04-19
 
 ### Fixed
