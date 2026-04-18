@@ -6,6 +6,7 @@ export type SettingsAction =
   | { type: 'set-color'; color: ColorKey }
   | { type: 'set-last-mode'; mode: Mode }
   | { type: 'set-blur'; value: number }
+  | { type: 'set-youtube-url'; url: string | null }
   | { type: 'reset' }
 
 const clamp = (n: number, min: number, max: number): number =>
@@ -31,12 +32,17 @@ export function transitionSettings(state: Settings, action: SettingsAction): Set
       if (next === state.blur) return state
       return { ...state, blur: next }
     }
+    case 'set-youtube-url': {
+      if (state.youtubeLastUrl === action.url) return state
+      return { ...state, youtubeLastUrl: action.url }
+    }
     case 'reset': {
       if (
         state.transparency === INITIAL_SETTINGS.transparency &&
         state.bgColor === INITIAL_SETTINGS.bgColor &&
         state.lastMode === INITIAL_SETTINGS.lastMode &&
-        state.blur === INITIAL_SETTINGS.blur
+        state.blur === INITIAL_SETTINGS.blur &&
+        state.youtubeLastUrl === INITIAL_SETTINGS.youtubeLastUrl
       ) {
         return INITIAL_SETTINGS
       }

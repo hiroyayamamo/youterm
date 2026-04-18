@@ -33,7 +33,20 @@ export function validateAndNormalize(raw: unknown): Settings {
       ? r.blur
       : INITIAL_SETTINGS.blur
 
-  return { transparency, bgColor, lastMode, blur }
+  const youtubeLastUrl =
+    r.youtubeLastUrl === null || r.youtubeLastUrl === undefined
+      ? null
+      : typeof r.youtubeLastUrl === 'string' && /^https?:\/\/(?:[a-z0-9-]+\.)*(?:youtube\.com|youtu\.be)(?:\/|$)/i.test(r.youtubeLastUrl)
+        ? r.youtubeLastUrl
+        : null
+
+  return {
+    transparency,
+    bgColor,
+    lastMode,
+    blur,
+    youtubeLastUrl,
+  }
 }
 
 export async function createRealSettingsStore(): Promise<SettingsStore> {

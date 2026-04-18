@@ -41,6 +41,7 @@ export interface Settings {
   bgColor: ColorKey
   lastMode: Mode
   blur: number
+  youtubeLastUrl: string | null
 }
 
 export const INITIAL_SETTINGS: Settings = {
@@ -48,6 +49,7 @@ export const INITIAL_SETTINGS: Settings = {
   bgColor: 'black',
   lastMode: 'overlay',
   blur: 0.1,
+  youtubeLastUrl: null,
 }
 
 export const COLOR_VALUES: Record<ColorKey, { r: number; g: number; b: number }> = {

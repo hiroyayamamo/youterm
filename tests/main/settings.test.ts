@@ -66,12 +66,28 @@ describe('transitionSettings', () => {
 
   describe('reset', () => {
     it('returns INITIAL_SETTINGS regardless of current state', () => {
-      const current: Settings = { transparency: 0.1, bgColor: 'dark-green', lastMode: 'youtube-only', blur: 0.5 }
+      const current: Settings = { transparency: 0.1, bgColor: 'dark-green', lastMode: 'youtube-only', blur: 0.5, youtubeLastUrl: 'https://www.youtube.com/watch?v=abc' }
       const next = transitionSettings(current, { type: 'reset' })
       expect(next).toEqual(INITIAL_SETTINGS)
     })
     it('returns the INITIAL_SETTINGS reference when already at initial', () => {
       const next = transitionSettings(INITIAL_SETTINGS, { type: 'reset' })
+      expect(next).toBe(INITIAL_SETTINGS)
+    })
+  })
+
+  describe('set-youtube-url', () => {
+    it('sets the URL', () => {
+      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-youtube-url', url: 'https://www.youtube.com/watch?v=abc' })
+      expect(next.youtubeLastUrl).toBe('https://www.youtube.com/watch?v=abc')
+    })
+    it('sets null to clear', () => {
+      const prev: Settings = { ...INITIAL_SETTINGS, youtubeLastUrl: 'https://www.youtube.com/watch?v=abc' }
+      const next = transitionSettings(prev, { type: 'set-youtube-url', url: null })
+      expect(next.youtubeLastUrl).toBeNull()
+    })
+    it('returns same reference when URL already equals current', () => {
+      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-youtube-url', url: null })
       expect(next).toBe(INITIAL_SETTINGS)
     })
   })
