@@ -2,6 +2,19 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.7.3] — 2026-04-19
+
+### Fixed
+- **初回起動時の広告を network 層で確実に除去**
+  - 従来の script injection(`did-frame-finish-load` および CDP `Page.addScriptToEvaluateOnNewDocument`)はタイミング的に iframe の初回 fetch に間に合わず、初回動画で広告が出ることがあった
+  - 対応: CDP `Fetch.enable` でレスポンスインターセプションを追加。`/youtubei/v1/player*` と `/youtubei/v1/next*` のレスポンスボディを network 層で取得し、JSON から広告フィールド(`playerAds` / `adPlacements` / `adSlots` / `adBreakHeartbeatParams` / `adBreakParams`)を剥がして page に返す
+  - 3 層防御:
+    1. `@ghostery/adblocker-electron` network filter
+    2. CDP Fetch response interception(本変更)
+    3. CDP `Page.addScriptToEvaluateOnNewDocument` + `did-frame-finish-load` の script injection(defense in depth)
+
+---
+
 ## [0.7.2] — 2026-04-19
 
 ### Fixed
