@@ -2,6 +2,7 @@ import type { TabsState } from '../shared/types'
 import { INITIAL_TABS_STATE } from '../shared/types'
 import { transitionTabs, type TabsAction } from './tabs'
 import type { PtyHandle } from './pty'
+import type { TabsStore } from './tabsStore'
 
 export type CloseResult = 'closed' | 'cancelled' | 'close-window'
 
@@ -10,6 +11,8 @@ export interface TabsControllerDeps {
   hasChildren: (tabId: string) => Promise<boolean>
   onDialogConfirm: () => Promise<boolean>
   onData: (tabId: string, data: string) => void
+  store?: TabsStore
+  debounceMs?: number
 }
 
 export interface TabsController {
@@ -25,10 +28,18 @@ export interface TabsController {
 }
 
 export function createTabsController(deps: TabsControllerDeps): TabsController {
-  let state: TabsState = INITIAL_TABS_STATE
-  let nextId = 2
+  const debounceMs = deps.debounceMs ?? 200
+  let state: TabsState = deps.store ? deps.store.load() : INITIAL_TABS_STATE
+  // Ensure nextId bumps past the maximum existing numeric id
+  const maxNumericId = state.tabs.reduce((acc, t) => {
+    const n = Number(t.id)
+    return Number.isFinite(n) && n > acc ? n : acc
+  }, 0)
+  let nextId = maxNumericId + 1
+  if (nextId < 2) nextId = 2
   const ptys = new Map<string, PtyHandle>()
   const subs = new Set<(s: TabsState) => void>()
+  let saveTimer: ReturnType<typeof setTimeout> | null = null
 
   const spawnFor = (tabId: string) => {
     const pty = deps.spawnPty(tabId)
@@ -36,14 +47,23 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
     ptys.set(tabId, pty)
   }
 
-  // Spawn initial tab
   for (const t of state.tabs) spawnFor(t.id)
+
+  const scheduleSave = () => {
+    if (!deps.store) return
+    if (saveTimer) clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => {
+      saveTimer = null
+      deps.store!.save(state)
+    }, debounceMs)
+  }
 
   const apply = (action: TabsAction) => {
     const next = transitionTabs(state, action)
     if (next === state) return
     state = next
     for (const cb of subs) cb(state)
+    scheduleSave()
   }
 
   return {
@@ -87,6 +107,7 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
       return () => subs.delete(cb)
     },
     disposeAll() {
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
       for (const pty of ptys.values()) pty.kill()
       ptys.clear()
     },
