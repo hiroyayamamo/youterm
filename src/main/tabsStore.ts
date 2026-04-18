@@ -11,6 +11,8 @@ function isValidTab(raw: unknown): raw is Tab {
   const r = raw as Record<string, unknown>
   if (typeof r.id !== 'string' || r.id.length === 0) return false
   if (r.customName !== null && typeof r.customName !== 'string') return false
+  // cwd is optional (v0.10 field); null or string are both acceptable. Missing → null.
+  if (r.cwd !== undefined && r.cwd !== null && typeof r.cwd !== 'string') return false
   return true
 }
 
@@ -21,7 +23,9 @@ export function validateTabsState(raw: unknown): TabsState {
   const tabs: Tab[] = []
   for (const t of r.tabs) {
     if (!isValidTab(t)) return INITIAL_TABS_STATE
-    tabs.push({ id: t.id, customName: t.customName })
+    const rawCwd = (t as unknown as { cwd?: unknown }).cwd
+    const cwd = typeof rawCwd === 'string' ? rawCwd : null
+    tabs.push({ id: t.id, customName: t.customName, cwd })
   }
   const activeCandidate = typeof r.activeId === 'string' ? r.activeId : ''
   const activeId = tabs.some(t => t.id === activeCandidate) ? activeCandidate : tabs[0].id
