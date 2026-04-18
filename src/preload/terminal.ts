@@ -71,6 +71,7 @@ contextBridge.exposeInMainWorld('youtermAPI', {
   },
   settingsSetTransparency(value: number) { ipcRenderer.send('settings:set-transparency', value) },
   settingsSetBlur(value: number) { ipcRenderer.send('settings:set-blur', value) },
+  settingsSetAdBlock(value: boolean) { ipcRenderer.send('settings:set-ad-block', value) },
   settingsSetColor(color: ColorKey) { ipcRenderer.send('settings:set-color', color) },
   settingsReset() { ipcRenderer.send('settings:reset') },
 
