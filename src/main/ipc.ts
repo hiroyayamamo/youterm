@@ -464,6 +464,43 @@ html.youterm-video-fill video.video-stream {
     } catch {}
   }
 
+  // CDP-based installer: script runs in EVERY document (incl. iframes) at document-start,
+  // before any page JS. Catches the initial /youtubei/v1/player call on first load.
+  let adStripScriptId: string | null = null
+
+  const installAdStripViaCDP = async (): Promise<void> => {
+    try {
+      if (!terminalView.webContents.debugger.isAttached()) {
+        terminalView.webContents.debugger.attach('1.3')
+      }
+      await terminalView.webContents.debugger.sendCommand('Page.enable')
+      const result = await terminalView.webContents.debugger.sendCommand(
+        'Page.addScriptToEvaluateOnNewDocument',
+        { source: AD_STRIP_SCRIPT },
+      )
+      adStripScriptId = (result as { identifier?: string }).identifier ?? null
+    } catch (err) {
+      console.error('[adStrip] CDP install failed:', err)
+    }
+  }
+
+  const uninstallAdStripViaCDP = async (): Promise<void> => {
+    if (!adStripScriptId) return
+    try {
+      await terminalView.webContents.debugger.sendCommand(
+        'Page.removeScriptToEvaluateOnNewDocument',
+        { identifier: adStripScriptId },
+      )
+    } catch (err) {
+      console.error('[adStrip] CDP uninstall failed:', err)
+    }
+    adStripScriptId = null
+  }
+
+  if (settings.getSettings().adBlockEnabled) {
+    await installAdStripViaCDP()
+  }
+
   async function applyVideoFillToAllYoutubeFrames(): Promise<void> {
     if (terminalView.webContents.isDestroyed()) return
     const enabled = settings.getSettings().videoFillMode
@@ -616,6 +653,11 @@ html.youterm-video-fill video.video-stream {
     if (s.adBlockEnabled !== lastAdBlockState) {
       lastAdBlockState = s.adBlockEnabled
       await adBlock.setEnabled(s.adBlockEnabled)
+      if (s.adBlockEnabled) {
+        await installAdStripViaCDP()
+      } else {
+        await uninstallAdStripViaCDP()
+      }
       // Reload iframe so filter change takes effect immediately
       if (!terminalView.webContents.isDestroyed()) {
         terminalView.webContents.send('youtube:reload')
@@ -634,6 +676,12 @@ html.youterm-video-fill video.video-stream {
       terminalView.webContents.removeListener('did-frame-finish-load', onFrameFinishLoad)
       if (activeLoginWin && !activeLoginWin.isDestroyed()) activeLoginWin.close()
       adBlock.dispose()
+      // CDP cleanup
+      try {
+        if (terminalView.webContents.debugger.isAttached()) {
+          terminalView.webContents.debugger.detach()
+        }
+      } catch {}
     },
   }
 }

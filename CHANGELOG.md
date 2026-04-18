@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.7.2] — 2026-04-19
+
+### Fixed
+- **アプリ初回起動時に広告が出る問題を修正**
+  - 原因: v0.7.1 の ad-strip JS は `did-frame-finish-load` で注入していたため、タイミング上 YouTube の最初の `/youtubei/v1/player` 呼び出しには間に合わず、初回動画の広告メタデータが素通りしていた
+  - 対応: Chrome DevTools Protocol の `Page.addScriptToEvaluateOnNewDocument` を使って、全ドキュメント(iframe 含む)の全 JS よりも先に ad-strip を実行させる
+  - 既存の `did-frame-finish-load` 経由の注入も保持(`__youtermAdStripInstalled` ガードで二重注入回避)、CDP が失敗した時の fallback として機能
+  - Ad Block トグル時は CDP スクリプト追加/削除 + iframe reload で反映
+
+---
+
 ## [0.7.1] — 2026-04-19
 
 ### Fixed
