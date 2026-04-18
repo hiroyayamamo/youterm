@@ -58,6 +58,15 @@ async function init(): Promise<void> {
     console.error('[renderer] failed to load initial settings:', err)
   }
 
+  // Set iframe initial src from persisted URL (or homepage if none)
+  {
+    const iframe = document.getElementById('youtube-iframe') as HTMLIFrameElement | null
+    const targetUrl = initialSettings?.youtubeLastUrl ?? 'https://www.youtube.com/'
+    if (iframe && iframe.src !== targetUrl) {
+      iframe.src = targetUrl
+    }
+  }
+
   // Tab bar
   const tabBarEl = document.createElement('div')
   tabBarEl.id = 'tab-bar'
