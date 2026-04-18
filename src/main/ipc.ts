@@ -456,28 +456,80 @@ html.youterm-video-fill video.video-stream {
   }
 
   // DOM-level ad skip: detect #movie_player.ad-showing and skip via button or fast-forward
+  const aggressiveClick = (el) => {
+    try { el.click() } catch {}
+    try {
+      const r = el.getBoundingClientRect()
+      const cx = r.left + r.width / 2
+      const cy = r.top + r.height / 2
+      const opts = { bubbles: true, cancelable: true, view: window, button: 0, clientX: cx, clientY: cy }
+      el.dispatchEvent(new MouseEvent('pointerdown', opts))
+      el.dispatchEvent(new MouseEvent('mousedown', opts))
+      el.dispatchEvent(new MouseEvent('pointerup', opts))
+      el.dispatchEvent(new MouseEvent('mouseup', opts))
+      el.dispatchEvent(new MouseEvent('click', opts))
+    } catch {}
+  }
+
+  const isVisible = (el) => {
+    if (!el) return false
+    if (el.offsetParent === null) return false
+    const s = getComputedStyle(el)
+    return s.visibility !== 'hidden' && s.display !== 'none' && parseFloat(s.opacity) > 0
+  }
+
+  const findSkipButton = () => {
+    const selectors = [
+      '.ytp-ad-skip-button-modern',
+      '.ytp-ad-skip-button',
+      '.ytp-skip-ad-button',
+      'button.ytp-ad-skip-button',
+      'button.ytp-skip-ad-button',
+      'button.ytp-ad-skip-button-modern',
+      'button[class*="ad-skip-button"]',
+      'button[class*="skip-ad-button"]',
+      'button[class*="ytp-skip-ad"]',
+      'button[class*="ytp-ad-skip"]',
+    ]
+    for (const sel of selectors) {
+      const nodes = document.querySelectorAll(sel)
+      for (const el of nodes) {
+        if (isVisible(el)) return el
+      }
+    }
+    // Fallback: scan buttons for skip-ad-like attributes
+    const all = document.querySelectorAll('button, div[role="button"], .ytp-ad-skip-button-container')
+    for (const el of all) {
+      if (!isVisible(el)) continue
+      const cls = (el.className || '').toString()
+      const aria = el.getAttribute && (el.getAttribute('aria-label') || '')
+      const text = (el.textContent || '').trim()
+      const tokens = \`\${cls} \${aria} \${text}\`.toLowerCase()
+      // Match English "skip ad" / "skip advertisement" / Japanese "広告をスキップ"
+      if ((tokens.includes('skip') && (tokens.includes('ad') || tokens.includes('advert'))) ||
+          text.includes('広告をスキップ') || aria.includes('広告をスキップ')) {
+        return el
+      }
+    }
+    return null
+  }
+
   const skipAdIfPresent = () => {
     const player = document.querySelector('#movie_player')
     if (!player) return
     const isAd = player.classList.contains('ad-showing') ||
-                 player.classList.contains('ad-interrupting')
+                 player.classList.contains('ad-interrupting') ||
+                 !!document.querySelector('.ad-showing') ||
+                 !!document.querySelector('.ytp-ad-player-overlay') ||
+                 !!document.querySelector('.ytp-ad-module')
     if (!isAd) return
-    // Try skip button first
-    const skipSelectors = [
-      '.ytp-ad-skip-button-modern',
-      '.ytp-ad-skip-button',
-      '.ytp-skip-ad-button',
-      'button[class*="ytp-skip-ad"]',
-      'button[class*="ytp-ad-skip"]',
-    ]
-    for (const sel of skipSelectors) {
-      const btn = document.querySelector(sel)
-      if (btn) {
-        try { btn.click() } catch {}
-        return
-      }
+    // Try skip button first (with aggressive click + expanded selectors)
+    const skipBtn = findSkipButton()
+    if (skipBtn) {
+      aggressiveClick(skipBtn)
+      return
     }
-    // Fast-forward the video element
+    // Fast-forward the video element as last resort
     const video = document.querySelector('video.html5-main-video') ||
                   document.querySelector('video.video-stream') ||
                   document.querySelector('video')
@@ -490,7 +542,7 @@ html.youterm-video-fill video.video-stream {
   }
 
   // Run skip check frequently while ads are showing
-  setInterval(skipAdIfPresent, 250)
+  setInterval(skipAdIfPresent, 100)
 
   // Also observe DOM mutations for class changes
   try {
