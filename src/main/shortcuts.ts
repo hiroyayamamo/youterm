@@ -103,6 +103,7 @@ export function installShortcuts(
           label: 'Video Fill',
           accelerator: 'Cmd+Shift+F',
           click: () => {
+            if (ctrl.getState().mode !== 'youtube-only') return
             const current = settings.getSettings().videoFillMode
             settings.dispatch({ type: 'set-video-fill', value: !current })
           },
