@@ -43,6 +43,7 @@ export interface Settings {
   blur: number
   youtubeLastUrl: string | null
   videoFillMode: boolean
+  adBlockEnabled: boolean
 }
 
 export const INITIAL_SETTINGS: Settings = {
@@ -52,6 +53,7 @@ export const INITIAL_SETTINGS: Settings = {
   blur: 0.1,
   youtubeLastUrl: null,
   videoFillMode: false,
+  adBlockEnabled: true,
 }
 
 export const COLOR_VALUES: Record<ColorKey, { r: number; g: number; b: number }> = {
