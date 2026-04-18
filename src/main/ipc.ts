@@ -286,19 +286,49 @@ html.youterm-video-fill {
   overflow: hidden !important;
   background: #000 !important;
 }
-html.youterm-video-fill ytd-app > *:not(ytd-page-manager),
+html.youterm-video-fill body {
+  background: #000 !important;
+}
+
+/* Hide specific chrome elements (narrow list; do NOT use broad ytd-app > * selector) */
 html.youterm-video-fill #masthead-container,
 html.youterm-video-fill tp-yt-app-drawer,
 html.youterm-video-fill ytd-mini-guide-renderer,
+html.youterm-video-fill ytd-popup-container,
 html.youterm-video-fill ytd-watch-flexy #secondary,
 html.youterm-video-fill ytd-watch-flexy #below,
 html.youterm-video-fill ytd-watch-flexy #chat,
 html.youterm-video-fill ytd-watch-flexy ytd-watch-metadata,
+html.youterm-video-fill ytd-watch-flexy ytd-merch-shelf-renderer,
 html.youterm-video-fill ytd-comments {
   display: none !important;
 }
-html.youterm-video-fill #movie_player,
+
+/* Force the #movie_player ancestor chain to be laid out (no display:none, no containment) */
+html.youterm-video-fill ytd-app,
+html.youterm-video-fill ytd-page-manager,
+html.youterm-video-fill ytd-watch-flexy,
+html.youterm-video-fill ytd-watch-flexy #columns,
+html.youterm-video-fill ytd-watch-flexy #primary,
+html.youterm-video-fill ytd-watch-flexy #primary-inner,
+html.youterm-video-fill ytd-watch-flexy #player-container-outer,
+html.youterm-video-fill ytd-watch-flexy #player-container,
+html.youterm-video-fill ytd-watch-flexy #player-container-inner,
 html.youterm-video-fill ytd-watch-flexy #player {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  contain: none !important;
+  transform: none !important;
+  filter: none !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Player fills the viewport */
+html.youterm-video-fill #movie_player {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -309,12 +339,24 @@ html.youterm-video-fill ytd-watch-flexy #player {
   z-index: 2147483647 !important;
   margin: 0 !important;
   padding: 0 !important;
+  background: #000 !important;
 }
-html.youterm-video-fill .html5-video-container,
-html.youterm-video-fill video.html5-main-video {
+
+/* Video fills its container */
+html.youterm-video-fill .html5-video-container {
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  inset: 0 !important;
+}
+html.youterm-video-fill video.html5-main-video,
+html.youterm-video-fill video.video-stream {
   width: 100% !important;
   height: 100% !important;
   object-fit: contain !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 `.trim()
 

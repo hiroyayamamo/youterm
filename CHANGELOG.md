@@ -2,6 +2,19 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.6.2] — 2026-04-19
+
+### Fixed
+- **Video-Fill モードで動画が白画面になる問題を修正**
+  - 原因: CSS の computed styles は正しかったが、`getBoundingClientRect` が 0×0 だった(動画の祖先要素のどこかに `display: none` / `contain` が効いていて box が生成されない状態)
+  - 対応:
+    - 祖先チェーン(ytd-app → ytd-page-manager → ytd-watch-flexy → #columns → #primary → #primary-inner → #player-container-* → #player)に強制的に `display: block; visibility: visible; contain: none; transform: none; filter: none` を適用
+    - 広すぎた `ytd-app > *:not(ytd-page-manager) { display: none }` ルールを、明示的な chrome 要素リストに narrow 化
+    - `#movie_player` 内部の `.html5-video-container` にも `position: absolute; inset: 0` を明示
+    - `body` の背景色も黒に統一
+
+---
+
 ## [0.6.1] — 2026-04-19
 
 ### Changed
