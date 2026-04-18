@@ -67,8 +67,7 @@ export async function attachTabs(
     return new Promise(resolve => {
       exec(`pgrep -P ${pid}`, (err, stdout) => {
         if (err) {
-          const errNo = (err as NodeJS.ErrnoException).code
-          if (errNo === 1 || errNo === '1') { resolve(false); return }
+          // pgrep exits 1 when no matches (not a real error); treat as "no children"
           resolve(false)
           return
         }
