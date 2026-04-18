@@ -1,22 +1,26 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AppState, Settings, ColorKey } from '../shared/types'
+import type { AppState, Settings, ColorKey, TabsState } from '../shared/types'
 
 type StateHandler = (s: AppState) => void
-type DataHandler = (d: string) => void
+type PtyDataHandler = (p: { tabId: string; data: string }) => void
 type SettingsHandler = (s: Settings) => void
 type VoidHandler = () => void
+type TabsStateHandler = (s: TabsState) => void
+type StartRenameHandler = (tabId: string) => void
 
 const stateHandlers = new Set<StateHandler>()
-const dataHandlers = new Set<DataHandler>()
+const ptyDataHandlers = new Set<PtyDataHandler>()
 const settingsHandlers = new Set<SettingsHandler>()
 const panelToggleHandlers = new Set<VoidHandler>()
 const youtubeReloadHandlers = new Set<VoidHandler>()
+const tabsStateHandlers = new Set<TabsStateHandler>()
+const startRenameHandlers = new Set<StartRenameHandler>()
 
 ipcRenderer.on('state:changed', (_e, state: AppState) => {
   for (const h of stateHandlers) h(state)
 })
-ipcRenderer.on('pty:data', (_e, data: string) => {
-  for (const h of dataHandlers) h(data)
+ipcRenderer.on('pty:data', (_e, payload: { tabId: string; data: string }) => {
+  for (const h of ptyDataHandlers) h(payload)
 })
 ipcRenderer.on('settings:changed', (_e, s: Settings) => {
   for (const h of settingsHandlers) h(s)
@@ -27,21 +31,27 @@ ipcRenderer.on('panel:toggle', () => {
 ipcRenderer.on('youtube:reload', () => {
   for (const h of youtubeReloadHandlers) h()
 })
+ipcRenderer.on('tabs:state', (_e, s: TabsState) => {
+  for (const h of tabsStateHandlers) h(s)
+})
+ipcRenderer.on('tabs:start-rename', (_e, tabId: string) => {
+  for (const h of startRenameHandlers) h(tabId)
+})
 
 contextBridge.exposeInMainWorld('youtermAPI', {
   onStateChanged(cb: StateHandler) {
     stateHandlers.add(cb)
     return () => stateHandlers.delete(cb)
   },
-  onPtyData(cb: DataHandler) {
-    dataHandlers.add(cb)
-    return () => dataHandlers.delete(cb)
+  onPtyData(cb: PtyDataHandler) {
+    ptyDataHandlers.add(cb)
+    return () => ptyDataHandlers.delete(cb)
   },
-  ptyWrite(data: string) {
-    ipcRenderer.send('pty:write', data)
+  ptyWrite(tabId: string, data: string) {
+    ipcRenderer.send('pty:write', { tabId, data })
   },
-  ptyResize(size: { cols: number; rows: number }) {
-    ipcRenderer.send('pty:resize', size)
+  ptyResize(tabId: string, size: { cols: number; rows: number }) {
+    ipcRenderer.send('pty:resize', { tabId, cols: size.cols, rows: size.rows })
   },
 
   onSettingsChanged(cb: SettingsHandler) {
@@ -59,16 +69,23 @@ contextBridge.exposeInMainWorld('youtermAPI', {
   settingsGetInitial(): Promise<Settings> {
     return ipcRenderer.invoke('settings:get-initial')
   },
-  settingsSetTransparency(value: number) {
-    ipcRenderer.send('settings:set-transparency', value)
+  settingsSetTransparency(value: number) { ipcRenderer.send('settings:set-transparency', value) },
+  settingsSetBlur(value: number) { ipcRenderer.send('settings:set-blur', value) },
+  settingsSetColor(color: ColorKey) { ipcRenderer.send('settings:set-color', color) },
+  settingsReset() { ipcRenderer.send('settings:reset') },
+
+  onTabsState(cb: TabsStateHandler) {
+    tabsStateHandlers.add(cb)
+    return () => tabsStateHandlers.delete(cb)
   },
-  settingsSetBlur(value: number) {
-    ipcRenderer.send('settings:set-blur', value)
+  onStartRename(cb: StartRenameHandler) {
+    startRenameHandlers.add(cb)
+    return () => startRenameHandlers.delete(cb)
   },
-  settingsSetColor(color: ColorKey) {
-    ipcRenderer.send('settings:set-color', color)
-  },
-  settingsReset() {
-    ipcRenderer.send('settings:reset')
-  },
+  tabsGetInitial(): Promise<TabsState> { return ipcRenderer.invoke('tabs:get-initial') },
+  tabsNew() { ipcRenderer.send('tabs:new') },
+  tabsClose(tabId: string) { ipcRenderer.send('tabs:close', { tabId }) },
+  tabsActivate(tabId: string) { ipcRenderer.send('tabs:activate', { tabId }) },
+  tabsRename(tabId: string, name: string | null) { ipcRenderer.send('tabs:rename', { tabId, name }) },
+  tabsContextMenu(tabId: string, x: number, y: number) { ipcRenderer.send('tabs:context-menu', { tabId, x, y }) },
 })
