@@ -99,6 +99,15 @@ export function installShortcuts(
     {
       label: 'View',
       submenu: [
+        {
+          label: 'Video Fill',
+          accelerator: 'Cmd+Shift+F',
+          click: () => {
+            const current = settings.getSettings().videoFillMode
+            settings.dispatch({ type: 'set-video-fill', value: !current })
+          },
+        },
+        { type: 'separator' },
         { label: 'Reload YouTube', accelerator: 'Cmd+R', click: () => {
           if (!bundle.terminalView.webContents.isDestroyed()) {
             bundle.terminalView.webContents.send('youtube:reload')

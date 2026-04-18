@@ -281,6 +281,78 @@ export function attachYoutube(
   let disposed = false
   let activeLoginWin: BrowserWindow | null = null
 
+  const VIDEO_FILL_CSS = `
+html.youterm-video-fill {
+  overflow: hidden !important;
+  background: #000 !important;
+}
+html.youterm-video-fill ytd-app > *:not(ytd-page-manager),
+html.youterm-video-fill #masthead-container,
+html.youterm-video-fill tp-yt-app-drawer,
+html.youterm-video-fill ytd-mini-guide-renderer,
+html.youterm-video-fill ytd-watch-flexy #secondary,
+html.youterm-video-fill ytd-watch-flexy #below,
+html.youterm-video-fill ytd-watch-flexy #chat,
+html.youterm-video-fill ytd-watch-flexy ytd-watch-metadata,
+html.youterm-video-fill ytd-comments {
+  display: none !important;
+}
+html.youterm-video-fill #movie_player,
+html.youterm-video-fill ytd-watch-flexy #player {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  z-index: 2147483647 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+html.youterm-video-fill .html5-video-container,
+html.youterm-video-fill video.html5-main-video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+`.trim()
+
+  async function ensureVideoFillStyle(frame: Electron.WebFrameMain): Promise<void> {
+    const cssEscaped = VIDEO_FILL_CSS.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$')
+    try {
+      await frame.executeJavaScript(
+        `(() => {
+          if (document.getElementById('youterm-video-fill-style')) return
+          const style = document.createElement('style')
+          style.id = 'youterm-video-fill-style'
+          style.textContent = \`${cssEscaped}\`
+          document.head.appendChild(style)
+        })()`,
+      )
+    } catch {}
+  }
+
+  async function applyVideoFillClass(frame: Electron.WebFrameMain, enabled: boolean): Promise<void> {
+    try {
+      await frame.executeJavaScript(
+        `document.documentElement.classList.toggle('youterm-video-fill', ${enabled ? 'true' : 'false'})`,
+      )
+    } catch {}
+  }
+
+  async function applyVideoFillToAllYoutubeFrames(): Promise<void> {
+    if (terminalView.webContents.isDestroyed()) return
+    const enabled = settings.getSettings().videoFillMode
+    const frames = terminalView.webContents.mainFrame.frames
+    for (const frame of frames) {
+      if (frame.url && /^https:\/\/(?:[a-z0-9-]+\.)*youtube\.com/i.test(frame.url)) {
+        await ensureVideoFillStyle(frame)
+        await applyVideoFillClass(frame, enabled)
+      }
+    }
+  }
+
   const onFrameNavigate = (
     _event: unknown,
     url: string,
@@ -353,6 +425,13 @@ export function attachYoutube(
   // Older Electron used 'will-navigate' for same-origin frame nav; prefer 'will-frame-navigate' for all frames
   terminalView.webContents.on('will-frame-navigate', onWillFrameNavigateWrapper)
 
+  const onFrameFinishLoad = async (_e: unknown, isMainFrame: boolean) => {
+    if (isMainFrame) return
+    if (disposed) return
+    await applyVideoFillToAllYoutubeFrames()
+  }
+  terminalView.webContents.on('did-frame-finish-load', onFrameFinishLoad)
+
   // Playback position: every 10s, read video.currentTime from the YouTube frame
   // and append/update &t=<sec> in the persisted URL so we can resume on restart.
   const PLAYBACK_POLL_INTERVAL_MS = 10_000
@@ -403,13 +482,20 @@ export function attachYoutube(
 
   const pollInterval = setInterval(pollPlayback, PLAYBACK_POLL_INTERVAL_MS)
 
+  const settingsUnsub = settings.subscribe(() => {
+    if (disposed) return
+    void applyVideoFillToAllYoutubeFrames()
+  })
+
   return {
     flushPlayback: pollPlayback,
     dispose() {
       disposed = true
       clearInterval(pollInterval)
+      settingsUnsub()
       terminalView.webContents.removeListener('did-frame-navigate', onFrameNavigate)
       terminalView.webContents.removeListener('will-frame-navigate', onWillFrameNavigateWrapper)
+      terminalView.webContents.removeListener('did-frame-finish-load', onFrameFinishLoad)
       if (activeLoginWin && !activeLoginWin.isDestroyed()) activeLoginWin.close()
     },
   }
