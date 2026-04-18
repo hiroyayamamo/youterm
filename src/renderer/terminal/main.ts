@@ -2,7 +2,6 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
-import { createModeIndicator } from './modeIndicator'
 import { createOptionsPanel } from './optionsPanel'
 import { createPanelController } from './panelController'
 import { createTabBar } from './tabBar'
@@ -80,8 +79,6 @@ async function init(): Promise<void> {
   const termArea = document.createElement('div')
   termArea.id = 'terminal-inner'
   root.appendChild(termArea)
-
-  const indicator = createModeIndicator(tabBarEl)
 
   const panel = createOptionsPanel({
     onTransparencyInput: v => window.youtermAPI.settingsSetTransparency(v),
@@ -185,7 +182,6 @@ async function init(): Promise<void> {
   }
 
   window.youtermAPI.onStateChanged(state => {
-    indicator.update(state)
     applyModeClass(state.mode)
     const iframe = document.getElementById('youtube-iframe') as HTMLIFrameElement | null
     if (state.mode === 'youtube-only') {
