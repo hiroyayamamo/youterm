@@ -2,6 +2,18 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.8.0] — 2026-04-19
+
+### Added
+- **起動時の自動再生抑制** — アプリ起動時、前回保存された URL の動画がロードされるが**最初の再生開始時点で自動的に一時停止**される
+  - 初回ロード時だけ発動(`window.__youtermInitialPauseScheduled` フラグで制御)
+  - ユーザーが明示的に再生ボタンを押すとそのまま再生
+  - 次動画への SPA 遷移やプレイリスト auto-advance では普通に再生(初回 pause 済みフラグが維持されるため)
+  - アプリ再起動すると iframe が作り直されるため、次回起動時もまた pause される
+  - 動画要素が出現するまで最大 30 秒間ポーリング(300ms 間隔)
+
+---
+
 ## [0.7.6] — 2026-04-19
 
 ### Fixed
