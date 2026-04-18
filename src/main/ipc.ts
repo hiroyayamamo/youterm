@@ -542,6 +542,44 @@ html.youterm-video-fill video.video-stream {
     }
     startObserving()
   } catch {}
+
+  // Pause video on FIRST play after app startup (runs once per iframe lifetime)
+  if (!window.__youtermInitialPauseScheduled) {
+    window.__youtermInitialPauseScheduled = true
+    let initialPauseDone = false
+
+    const attachPauseOnce = (video) => {
+      if (!video) return
+      const onPlay = () => {
+        if (initialPauseDone) return
+        try { video.pause() } catch {}
+        initialPauseDone = true
+        video.removeEventListener('play', onPlay)
+        video.removeEventListener('playing', onPlay)
+      }
+      video.addEventListener('play', onPlay)
+      video.addEventListener('playing', onPlay)
+    }
+
+    const pollForVideo = () => {
+      if (initialPauseDone) return
+      const video = document.querySelector('video.html5-main-video') ||
+                    document.querySelector('video.video-stream') ||
+                    document.querySelector('video')
+      if (video) {
+        attachPauseOnce(video)
+      }
+    }
+
+    // Try immediately
+    pollForVideo()
+    // Retry for 30 seconds in case video element is created after script runs
+    const retryInterval = setInterval(() => {
+      if (initialPauseDone) { clearInterval(retryInterval); return }
+      pollForVideo()
+    }, 300)
+    setTimeout(() => clearInterval(retryInterval), 30000)
+  }
 })()
 `.trim()
 
