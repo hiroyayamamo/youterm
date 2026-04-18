@@ -2,6 +2,25 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.7.0] — 2026-04-19
+
+### Added
+- **広告ブロック(Ad Block)機能** — `@ghostery/adblocker-electron` を `persist:terminal` session に適用
+  - `Settings.adBlockEnabled: boolean`、デフォルト `true`、永続化
+  - オプションパネルに Ad Block チェックボックスを追加(緑のアクセントカラー)
+  - トグル時は iframe をリロードして反映
+  - フィルタは起動時に EasyList / EasyPrivacy を取得(失敗時は無効化で continue、アプリ自体はクラッシュしない)
+
+### Notes / Known Limitations
+- **Network layer blocking のみ**: cosmetic filter(DOM 要素非表示)は `@ghostery/adblocker-electron` v2 が `session.registerPreloadScript` を要求する仕様(Electron 35+)で、本プロジェクトは Electron 32 のため workaround として無効化している。実用上は pre-roll 動画広告のブロックは可能だが、サイドバーや動画内バナーなど DOM 系は残る可能性あり
+- **SSAI(Server-Side Ad Insertion)不可**: YouTube が動画ストリームに直接広告を差し込む場合、network 層では分離できない
+- **adblock 検知警告**: YouTube が「広告ブロッカーは許可されていません」警告を出すことがある(一時的なもの/数回のリロードで解消することが多い)
+
+### 将来改善
+- Electron 35+ へアップグレードすれば cosmetic filter も有効化可能
+
+---
+
 ## [0.6.4] — 2026-04-19
 
 ### Removed
