@@ -392,14 +392,90 @@ html.youterm-video-fill video.video-stream {
     } catch {}
   }
 
+  const AD_STRIP_SCRIPT = `
+(() => {
+  if (window.__youtermAdStripInstalled) return
+  window.__youtermAdStripInstalled = true
+
+  const AD_FIELDS = ['playerAds', 'adPlacements', 'adSlots', 'adBreakHeartbeatParams']
+  const stripAds = (obj) => {
+    if (!obj || typeof obj !== 'object') return obj
+    for (const f of AD_FIELDS) { if (f in obj) delete obj[f] }
+    return obj
+  }
+
+  const isPlayerApi = (url) => {
+    if (typeof url !== 'string') return false
+    return url.includes('/youtubei/v1/player') ||
+           url.includes('/youtubei/v1/next') ||
+           url.includes('/get_video_info')
+  }
+
+  const origFetch = window.fetch
+  window.fetch = function(...args) {
+    const input = args[0]
+    const url = typeof input === 'string' ? input : (input && input.url)
+    if (!isPlayerApi(url)) return origFetch.apply(this, args)
+    return origFetch.apply(this, args).then(async (response) => {
+      if (!response || !response.ok) return response
+      try {
+        const text = await response.clone().text()
+        const data = JSON.parse(text)
+        stripAds(data)
+        return new Response(JSON.stringify(data), {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+        })
+      } catch {
+        return response
+      }
+    })
+  }
+
+  // XHR path (older YouTube code may use this)
+  const origOpen = XMLHttpRequest.prototype.open
+  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+    this.__youtermUrl = url
+    return origOpen.apply(this, [method, url, ...rest])
+  }
+
+  const origSend = XMLHttpRequest.prototype.send
+  XMLHttpRequest.prototype.send = function(...args) {
+    if (isPlayerApi(this.__youtermUrl)) {
+      this.addEventListener('load', () => {
+        try {
+          const data = JSON.parse(this.responseText)
+          stripAds(data)
+          const modified = JSON.stringify(data)
+          Object.defineProperty(this, 'responseText', { configurable: true, get: () => modified })
+          Object.defineProperty(this, 'response', { configurable: true, get: () => modified })
+        } catch {}
+      })
+    }
+    return origSend.apply(this, args)
+  }
+})()
+`.trim()
+
+  async function injectAdStrip(frame: Electron.WebFrameMain): Promise<void> {
+    try {
+      await frame.executeJavaScript(AD_STRIP_SCRIPT)
+    } catch {}
+  }
+
   async function applyVideoFillToAllYoutubeFrames(): Promise<void> {
     if (terminalView.webContents.isDestroyed()) return
     const enabled = settings.getSettings().videoFillMode
+    const adBlockEnabled = settings.getSettings().adBlockEnabled
     const frames = terminalView.webContents.mainFrame.frames
     for (const frame of frames) {
       if (frame.url && /^https:\/\/(?:[a-z0-9-]+\.)*youtube\.com/i.test(frame.url)) {
         await ensureVideoFillStyle(frame)
         await applyVideoFillClass(frame, enabled)
+        if (adBlockEnabled) {
+          await injectAdStrip(frame)
+        }
       }
     }
   }

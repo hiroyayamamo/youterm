@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.7.1] — 2026-04-19
+
+### Fixed
+- **プレイリスト連続再生で 2 曲目以降に広告が出る問題を修正**
+  - 原因: network filter は初回 player ロードは止めるが、YouTube の SPA auto-advance 時に `/youtubei/v1/player` から返る ad metadata(`playerAds` / `adPlacements` / `adSlots`)を完全には止められなかった
+  - 対応: YouTube iframe 内で `window.fetch` と `XMLHttpRequest.prototype.open/send` を monkey-patch。player API レスポンスから広告フィールドを動的に削除してプレイヤーに渡す
+  - 注入は `did-frame-finish-load` タイミングで実行、`window.__youtermAdStripInstalled` で idempotent
+  - ad block が OFF のときは注入しない
+
+---
+
 ## [0.7.0] — 2026-04-19
 
 ### Added
