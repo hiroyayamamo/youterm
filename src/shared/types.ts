@@ -42,6 +42,7 @@ export interface Settings {
   lastMode: Mode
   blur: number
   youtubeLastUrl: string | null
+  videoFillMode: boolean
 }
 
 export const INITIAL_SETTINGS: Settings = {
@@ -50,6 +51,7 @@ export const INITIAL_SETTINGS: Settings = {
   lastMode: 'overlay',
   blur: 0.1,
   youtubeLastUrl: null,
+  videoFillMode: false,
 }
 
 export const COLOR_VALUES: Record<ColorKey, { r: number; g: number; b: number }> = {

@@ -66,7 +66,7 @@ describe('transitionSettings', () => {
 
   describe('reset', () => {
     it('returns INITIAL_SETTINGS regardless of current state', () => {
-      const current: Settings = { transparency: 0.1, bgColor: 'dark-green', lastMode: 'youtube-only', blur: 0.5, youtubeLastUrl: 'https://www.youtube.com/watch?v=abc' }
+      const current: Settings = { transparency: 0.1, bgColor: 'dark-green', lastMode: 'youtube-only', blur: 0.5, youtubeLastUrl: 'https://www.youtube.com/watch?v=abc', videoFillMode: true }
       const next = transitionSettings(current, { type: 'reset' })
       expect(next).toEqual(INITIAL_SETTINGS)
     })
@@ -88,6 +88,22 @@ describe('transitionSettings', () => {
     })
     it('returns same reference when URL already equals current', () => {
       const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-youtube-url', url: null })
+      expect(next).toBe(INITIAL_SETTINGS)
+    })
+  })
+
+  describe('set-video-fill', () => {
+    it('enables video fill mode', () => {
+      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-video-fill', value: true })
+      expect(next.videoFillMode).toBe(true)
+    })
+    it('disables video fill mode', () => {
+      const prev: Settings = { ...INITIAL_SETTINGS, videoFillMode: true }
+      const next = transitionSettings(prev, { type: 'set-video-fill', value: false })
+      expect(next.videoFillMode).toBe(false)
+    })
+    it('returns same reference when value already equals current', () => {
+      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-video-fill', value: false })
       expect(next).toBe(INITIAL_SETTINGS)
     })
   })
