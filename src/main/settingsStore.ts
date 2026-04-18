@@ -40,12 +40,16 @@ export function validateAndNormalize(raw: unknown): Settings {
         ? r.youtubeLastUrl
         : null
 
+  const videoFillMode =
+    typeof r.videoFillMode === 'boolean' ? r.videoFillMode : INITIAL_SETTINGS.videoFillMode
+
   return {
     transparency,
     bgColor,
     lastMode,
     blur,
     youtubeLastUrl,
+    videoFillMode,
   }
 }
 
