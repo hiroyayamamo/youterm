@@ -233,7 +233,3 @@ export function attachSettings(
     },
   }
 }
-
-// Legacy aliases for backward compat during migration — remove after Task 5
-export { attachTabs as attachPty }
-export type PtyBridge = TabsBridge
