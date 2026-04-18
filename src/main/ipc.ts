@@ -270,6 +270,7 @@ function isYoutubeHomeUrl(url: string): boolean {
 
 export interface YoutubeBridge {
   dispose(): void
+  flushPlayback(): Promise<void>
 }
 
 export function attachYoutube(
@@ -352,9 +353,61 @@ export function attachYoutube(
   // Older Electron used 'will-navigate' for same-origin frame nav; prefer 'will-frame-navigate' for all frames
   terminalView.webContents.on('will-frame-navigate', onWillFrameNavigateWrapper)
 
+  // Playback position: every 10s, read video.currentTime from the YouTube frame
+  // and append/update &t=<sec> in the persisted URL so we can resume on restart.
+  const PLAYBACK_POLL_INTERVAL_MS = 10_000
+
+  const getYoutubeFrame = () => {
+    if (terminalView.webContents.isDestroyed()) return null
+    const frames = terminalView.webContents.mainFrame.frames
+    for (const frame of frames) {
+      if (frame.url && /^https:\/\/(?:[a-z0-9-]+\.)*youtube\.com/i.test(frame.url)) {
+        return frame
+      }
+    }
+    return null
+  }
+
+  const pollPlayback = async () => {
+    if (disposed) return
+    const frame = getYoutubeFrame()
+    if (!frame) return
+    try {
+      const result = await frame.executeJavaScript(
+        `(() => {
+          const v = document.querySelector('video')
+          if (!v || isNaN(v.currentTime) || v.currentTime < 1) return null
+          return { t: Math.floor(v.currentTime), url: window.location.href }
+        })()`,
+      )
+      if (!result || typeof result !== 'object') return
+      const { t, url } = result as { t: number; url: string }
+      if (!url || typeof url !== 'string') return
+      // Only persist YouTube watch URLs (not home, not search). Watch URLs have ?v=
+      if (!url.includes('youtube.com') || !/[?&]v=/.test(url)) return
+      // Strip existing t= / time_continue= params, then append our t=
+      const u = new URL(url)
+      u.searchParams.delete('t')
+      u.searchParams.delete('time_continue')
+      if (t >= 1) u.searchParams.set('t', String(t))
+      const finalUrl = u.toString()
+      if (finalUrl !== settings.getSettings().youtubeLastUrl) {
+        settings.dispatch({ type: 'set-youtube-url', url: finalUrl })
+      }
+    } catch {
+      // Cross-origin access is allowed via webFrameMain.executeJavaScript but may
+      // still fail during page transitions or if the iframe isn't YouTube yet.
+      // Silent failure is OK; the next poll will retry.
+    }
+  }
+
+  const pollInterval = setInterval(pollPlayback, PLAYBACK_POLL_INTERVAL_MS)
+
   return {
+    flushPlayback: pollPlayback,
     dispose() {
       disposed = true
+      clearInterval(pollInterval)
       terminalView.webContents.removeListener('did-frame-navigate', onFrameNavigate)
       terminalView.webContents.removeListener('will-frame-navigate', onWillFrameNavigateWrapper)
       if (activeLoginWin && !activeLoginWin.isDestroyed()) activeLoginWin.close()
