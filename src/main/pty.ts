@@ -24,6 +24,7 @@ export interface PtyHandle {
   write(data: string): void
   resize(cols: number, rows: number): void
   kill(): void
+  getPid(): number | null
 }
 
 export interface CreatePtyOptions {
@@ -48,6 +49,8 @@ export function createPtyHandle(opts: CreatePtyOptions): PtyHandle {
     rows,
     name: 'xterm-256color',
   })
+
+  const capturedPid = (pty as unknown as { pid?: number }).pid ?? null
 
   const dataHandlers: Array<(data: string) => void> = []
   const exitHandlers: Array<() => void> = []
@@ -82,6 +85,9 @@ export function createPtyHandle(opts: CreatePtyOptions): PtyHandle {
     },
     kill() {
       pty.kill()
+    },
+    getPid() {
+      return typeof capturedPid === 'number' ? capturedPid : null
     },
   }
 }

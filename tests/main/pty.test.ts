@@ -1,12 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createPtyHandle, type PtySpawn, type IPtyLike } from '../../src/main/pty'
 
-const makeFakePty = (): IPtyLike & {
+const makeFakePty = (pid?: number): IPtyLike & {
   _dataHandler?: (data: string) => void
   _exitHandler?: () => void
   _written: string[]
   _resized: Array<{ cols: number; rows: number }>
   _killed: boolean
+  pid?: number
 } => {
   const fake = {
     _dataHandler: undefined as ((data: string) => void) | undefined,
@@ -14,6 +15,7 @@ const makeFakePty = (): IPtyLike & {
     _written: [] as string[],
     _resized: [] as Array<{ cols: number; rows: number }>,
     _killed: false,
+    pid,
     onData(cb: (data: string) => void) {
       fake._dataHandler = cb
       return { dispose() {} }
@@ -108,5 +110,17 @@ describe('createPtyHandle', () => {
     unsubscribe()
     fake._exitHandler?.()
     expect(exited).toBe(0)
+  })
+
+  it('getPid returns the underlying pty pid when present', () => {
+    const fake = makeFakePty(12345)
+    const handle = createPtyHandle({ spawn: () => fake, cwd: '/', env: {} })
+    expect(handle.getPid()).toBe(12345)
+  })
+
+  it('getPid returns null when underlying pty has no pid', () => {
+    const fake = makeFakePty()
+    const handle = createPtyHandle({ spawn: () => fake, cwd: '/', env: {} })
+    expect(handle.getPid()).toBeNull()
   })
 })

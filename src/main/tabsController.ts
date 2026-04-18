@@ -7,7 +7,7 @@ import type { TabsStore } from './tabsStore'
 export type CloseResult = 'closed' | 'cancelled' | 'close-window'
 
 export interface TabsControllerDeps {
-  spawnPty: (tabId: string) => PtyHandle
+  spawnPty: (tabId: string, cwd: string | null) => PtyHandle
   hasChildren: (tabId: string) => Promise<boolean>
   onDialogConfirm: () => Promise<boolean>
   onData: (tabId: string, data: string) => void
@@ -42,7 +42,9 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
   let saveTimer: ReturnType<typeof setTimeout> | null = null
 
   const spawnFor = (tabId: string) => {
-    const pty = deps.spawnPty(tabId)
+    const tab = state.tabs.find(t => t.id === tabId)
+    const cwd = tab?.cwd ?? null
+    const pty = deps.spawnPty(tabId, cwd)
     pty.onData(data => deps.onData(tabId, data))
     ptys.set(tabId, pty)
   }

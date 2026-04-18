@@ -1,5 +1,6 @@
 import { ipcMain, dialog, Menu, MenuItem, BrowserWindow, type WebContentsView } from 'electron'
 import os from 'node:os'
+import fs from 'node:fs'
 import { exec } from 'node:child_process'
 import { createRealPtySpawn, type PtyHandle, type PtySpawn } from './pty'
 import type { TabsController } from './tabsController'
@@ -24,9 +25,19 @@ export async function attachTabs(
   const pidByTab = new Map<string, number>()
   const tabsStore = await createRealTabsStore()
 
-  const spawnPtyWithPid = (tabId: string): PtyHandle => {
+  const spawnPtyWithPid = (tabId: string, tabCwd: string | null): PtyHandle => {
+    // Use tab's stored cwd if it's a valid existing directory, else fall back to homedir
+    let cwd = os.homedir()
+    if (tabCwd && typeof tabCwd === 'string') {
+      try {
+        const stats = fs.statSync(tabCwd)
+        if (stats.isDirectory()) cwd = tabCwd
+      } catch {
+        // Directory doesn't exist or unreadable, stick with homedir
+      }
+    }
     const rawPty = spawn('/bin/zsh', ['-l'], {
-      cwd: os.homedir(),
+      cwd,
       env: { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor' },
       cols: 120,
       rows: 30,
@@ -60,6 +71,10 @@ export async function attachTabs(
       kill: () => {
         pidByTab.delete(tabId)
         rawPty.kill()
+      },
+      getPid: () => {
+        const pid = (rawPty as unknown as { pid?: number }).pid
+        return typeof pid === 'number' ? pid : null
       },
     }
   }
