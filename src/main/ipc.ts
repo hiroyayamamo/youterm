@@ -4,6 +4,7 @@ import { exec } from 'node:child_process'
 import { createRealPtySpawn, type PtyHandle, type PtySpawn } from './pty'
 import type { TabsController } from './tabsController'
 import { createTabsController } from './tabsController'
+import { createRealTabsStore } from './tabsStore'
 import type { SettingsController } from './settingsController'
 import type { Settings, ColorKey } from '../shared/types'
 
@@ -20,6 +21,7 @@ export async function attachTabs(
 ): Promise<TabsBridge> {
   const spawn: PtySpawn = await createRealPtySpawn()
   const pidByTab = new Map<string, number>()
+  const tabsStore = await createRealTabsStore()
 
   const spawnPtyWithPid = (tabId: string): PtyHandle => {
     const rawPty = spawn('/bin/zsh', ['-l'], {
@@ -95,6 +97,7 @@ export async function attachTabs(
         terminalView.webContents.send('pty:data', { tabId, data })
       }
     },
+    store: tabsStore,
   })
 
   const broadcastState = () => {
