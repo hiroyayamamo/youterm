@@ -2,6 +2,30 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.5.0] — 2026-04-18
+
+### Added
+- **YouTube の最後に開いていた URL を起動間で復元**
+  - `Settings.youtubeLastUrl` を追加(初期 null = homepage)
+  - `did-frame-navigate` で iframe のナビゲーションを監視し、YouTube 系 URL 変更時に `set-youtube-url` アクションを発火
+  - 200ms debounce で settings.json に保存(既存の debounced-save パターン再利用)
+  - 起動時: iframe の初期 src は persisted URL、無ければ `https://www.youtube.com/`
+  - URL バリデーション: `youtube.com` / `youtu.be` ドメインのみ accept、不正値は null フォールバック
+- **YouTube ログインフロー修正** — 「Sign in」押下時にフレームバスタ JS でエラーになる問題に対処
+  - `will-frame-navigate` で `accounts.google.com` / `myaccount.google.com` への遷移を検知して `preventDefault`
+  - 同じ Terminal session(`persist:terminal`)を使う新規 `BrowserWindow`(480×640、枠あり)でログインページを開く
+  - Cookie が session 共有なので、ログイン成功時にメイン iframe にも認証が反映される
+  - ログインウィンドウが `youtube.com/*` にナビゲートしたら自動クローズ、Terminal 側の iframe を reload して認証状態反映
+
+### Changed
+- `src/renderer/terminal/index.html` の iframe 初期 src を `about:blank` に(起動後 main.ts が正しい URL を設定)
+- `INITIAL_SETTINGS` に `youtubeLastUrl: null` フィールド追加、field-by-field validation で後方互換維持
+
+### Notes
+- ダークモード / シアターモード / ログイン状態は既存の session 永続化で自動的に保たれる(v0.2 以降の挙動を継承)
+
+---
+
 ## [0.4.1] — 2026-04-18
 
 ### Added
