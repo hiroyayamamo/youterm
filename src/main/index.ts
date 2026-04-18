@@ -6,6 +6,11 @@ import { createSettingsController, type SettingsController } from './settingsCon
 import { createRealSettingsStore } from './settingsStore'
 import { installShortcuts } from './shortcuts'
 
+// Disable Chromium third-party storage partitioning so the YouTube iframe shares
+// cookies/localStorage with the session jar. Required for YouTube preferences
+// (dark mode, theater mode, PREF cookie) to persist across app restarts.
+app.commandLine.appendSwitch('disable-features', 'ThirdPartyStoragePartitioning,PartitionedCookies')
+
 let bundle: ReturnType<typeof createMainWindow> | undefined
 let tabsBridge: TabsBridge | undefined
 let settingsBridge: SettingsBridge | undefined
@@ -56,6 +61,18 @@ app.on('window-all-closed', () => {
   settingsBridge?.dispose()
   tabsBridge?.dispose()
   if (process.platform !== 'darwin') app.quit()
+})
+
+let quitting = false
+app.on('before-quit', async event => {
+  if (quitting) return
+  if (!youtubeBridge) return
+  event.preventDefault()
+  quitting = true
+  try {
+    await youtubeBridge.flushPlayback()
+  } catch {}
+  app.quit()
 })
 
 export { modeCtrl, settings }
