@@ -34,7 +34,7 @@ async function start() {
   })
 
   settingsBridge = attachSettings(bundle.terminalView, settings)
-  youtubeBridge = attachYoutube(bundle.win, bundle.terminalView, settings)
+  youtubeBridge = await attachYoutube(bundle.win, bundle.terminalView, settings)
   installShortcuts(bundle, modeCtrl, settings, tabsBridge.tabsController)
 
   app.on('activate', async () => {
@@ -48,7 +48,7 @@ async function start() {
         }
       })
       settingsBridge = attachSettings(bundle.terminalView, settings!)
-      youtubeBridge = attachYoutube(bundle.win, bundle.terminalView, settings!)
+      youtubeBridge = await attachYoutube(bundle.win, bundle.terminalView, settings!)
       installShortcuts(bundle, modeCtrl, settings!, tabsBridge.tabsController)
     }
   })

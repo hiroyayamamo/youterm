@@ -23,6 +23,7 @@ export interface YoutermAPI {
   settingsSetTransparency(value: number): void
   settingsSetColor(color: ColorKey): void
   settingsSetBlur(value: number): void
+  settingsSetAdBlock(value: boolean): void
   settingsReset(): void
   onTabsState(cb: (state: TabsState) => void): () => boolean
   onStartRename(cb: (tabId: string) => void): () => boolean

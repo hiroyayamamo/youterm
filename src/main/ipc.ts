@@ -6,6 +6,7 @@ import type { TabsController } from './tabsController'
 import { createTabsController } from './tabsController'
 import { createRealTabsStore } from './tabsStore'
 import type { SettingsController } from './settingsController'
+import { createAdBlockController } from './adBlock'
 import type { Settings, ColorKey } from '../shared/types'
 
 const VALID_COLORS: ColorKey[] = ['black', 'dark-gray', 'dark-blue', 'dark-green']
@@ -209,6 +210,9 @@ export function attachSettings(
   const onSetBlur = (_e: unknown, value: unknown) => {
     if (typeof value === 'number') settings.dispatch({ type: 'set-blur', value })
   }
+  const onSetAdBlock = (_e: unknown, value: unknown) => {
+    if (typeof value === 'boolean') settings.dispatch({ type: 'set-ad-block', value })
+  }
   const onSetColor = (_e: unknown, color: unknown) => {
     if (typeof color === 'string' && (VALID_COLORS as string[]).includes(color)) {
       settings.dispatch({ type: 'set-color', color: color as ColorKey })
@@ -218,6 +222,7 @@ export function attachSettings(
 
   ipcMain.on('settings:set-transparency', onSetTransparency)
   ipcMain.on('settings:set-blur', onSetBlur)
+  ipcMain.on('settings:set-ad-block', onSetAdBlock)
   ipcMain.on('settings:set-color', onSetColor)
   ipcMain.on('settings:reset', onReset)
 
@@ -228,6 +233,7 @@ export function attachSettings(
     dispose() {
       ipcMain.removeListener('settings:set-transparency', onSetTransparency)
       ipcMain.removeListener('settings:set-blur', onSetBlur)
+      ipcMain.removeListener('settings:set-ad-block', onSetAdBlock)
       ipcMain.removeListener('settings:set-color', onSetColor)
       ipcMain.removeListener('settings:reset', onReset)
       ipcMain.removeHandler('settings:get-initial')
@@ -273,13 +279,16 @@ export interface YoutubeBridge {
   flushPlayback(): Promise<void>
 }
 
-export function attachYoutube(
+export async function attachYoutube(
   win: BrowserWindow,
   terminalView: WebContentsView,
   settings: SettingsController,
-): YoutubeBridge {
+): Promise<YoutubeBridge> {
   let disposed = false
   let activeLoginWin: BrowserWindow | null = null
+
+  const adBlock = await createAdBlockController(terminalView.webContents.session)
+  await adBlock.setEnabled(settings.getSettings().adBlockEnabled)
 
   const VIDEO_FILL_CSS = `
 html.youterm-video-fill {
@@ -524,9 +533,18 @@ html.youterm-video-fill video.video-stream {
 
   const pollInterval = setInterval(pollPlayback, PLAYBACK_POLL_INTERVAL_MS)
 
-  const settingsUnsub = settings.subscribe(() => {
+  let lastAdBlockState = settings.getSettings().adBlockEnabled
+  const settingsUnsub = settings.subscribe(async s => {
     if (disposed) return
     void applyVideoFillToAllYoutubeFrames()
+    if (s.adBlockEnabled !== lastAdBlockState) {
+      lastAdBlockState = s.adBlockEnabled
+      await adBlock.setEnabled(s.adBlockEnabled)
+      // Reload iframe so filter change takes effect immediately
+      if (!terminalView.webContents.isDestroyed()) {
+        terminalView.webContents.send('youtube:reload')
+      }
+    }
   })
 
   return {
@@ -539,6 +557,7 @@ html.youterm-video-fill video.video-stream {
       terminalView.webContents.removeListener('will-frame-navigate', onWillFrameNavigateWrapper)
       terminalView.webContents.removeListener('did-frame-finish-load', onFrameFinishLoad)
       if (activeLoginWin && !activeLoginWin.isDestroyed()) activeLoginWin.close()
+      adBlock.dispose()
     },
   }
 }
