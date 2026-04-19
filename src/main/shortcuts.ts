@@ -144,7 +144,24 @@ export function installShortcuts(
         { label: 'Reload YouTube', accelerator: 'Cmd+R', click: () => { void youtube.reloadAdBlockAndIframe() } },
         { label: 'Hard Reload', accelerator: 'Cmd+Shift+R', click: () => bundle.terminalView.webContents.reloadIgnoringCache() },
         { type: 'separator' },
-        { role: 'toggleDevTools' },
+        {
+          label: 'Toggle DevTools (Terminal)',
+          accelerator: 'Cmd+Alt+I',
+          click: () => {
+            const wc = bundle.terminalView.webContents
+            if (wc.isDevToolsOpened()) wc.closeDevTools()
+            else wc.openDevTools({ mode: 'detach' })
+          },
+        },
+        {
+          label: 'Toggle DevTools (Window)',
+          accelerator: 'Cmd+Alt+Shift+I',
+          click: () => {
+            const wc = bundle.win.webContents
+            if (wc.isDevToolsOpened()) wc.closeDevTools()
+            else wc.openDevTools({ mode: 'detach' })
+          },
+        },
       ],
     },
   ]
