@@ -1,4 +1,4 @@
-import type { BrowserWindow, WebContentsView } from 'electron'
+import type { BrowserWindow } from 'electron'
 import type { AppState, Mode } from '../shared/types'
 import { INITIAL_STATE } from '../shared/types'
 import { transition, type Action } from './state'
@@ -11,7 +11,6 @@ export interface ModeController {
 
 export interface ModeControllerDeps {
   win: BrowserWindow
-  terminalView: WebContentsView
 }
 
 export interface CreateModeControllerOptions {
@@ -29,8 +28,8 @@ export function createModeController(
 
   const broadcast = () => {
     for (const cb of subs) cb(state)
-    if (!deps.terminalView.webContents.isDestroyed()) {
-      deps.terminalView.webContents.send('state:changed', state)
+    if (!deps.win.webContents.isDestroyed()) {
+      deps.win.webContents.send('state:changed', state)
     }
   }
 

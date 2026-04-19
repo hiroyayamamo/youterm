@@ -1,4 +1,4 @@
-import { app, ipcMain, dialog, Menu, MenuItem, BrowserWindow, type WebContentsView } from 'electron'
+import { app, ipcMain, dialog, Menu, MenuItem, BrowserWindow, type WebContents } from 'electron'
 import os from 'node:os'
 import fs from 'node:fs'
 import { exec } from 'node:child_process'
@@ -20,7 +20,7 @@ export interface TabsBridge {
 
 export async function attachTabs(
   win: BrowserWindow,
-  terminalView: WebContentsView,
+  view: WebContents,
 ): Promise<TabsBridge> {
   const spawn: PtySpawn = await createRealPtySpawn()
   const pidByTab = new Map<string, number>()
@@ -130,8 +130,8 @@ export async function attachTabs(
 
   const sendOrBuffer = (tabId: string, data: string) => {
     if (readyTabs.has(tabId)) {
-      if (!terminalView.webContents.isDestroyed()) {
-        terminalView.webContents.send('pty:data', { tabId, data })
+      if (!view.isDestroyed()) {
+        view.send('pty:data', { tabId, data })
       }
     } else {
       enqueueForTab(tabId, data)
@@ -145,8 +145,8 @@ export async function attachTabs(
     readyTabs.add(tabId)
     const buffered = pendingByTab.get(tabId)
     pendingByTab.delete(tabId)
-    if (buffered && !terminalView.webContents.isDestroyed()) {
-      terminalView.webContents.send('pty:data', { tabId, data: buffered })
+    if (buffered && !view.isDestroyed()) {
+      view.send('pty:data', { tabId, data: buffered })
     }
   }
   ipcMain.on('terminal:runtime-ready', handleRuntimeReady)
@@ -179,8 +179,8 @@ export async function attachTabs(
   })
 
   const broadcastState = () => {
-    if (!terminalView.webContents.isDestroyed()) {
-      terminalView.webContents.send('tabs:state', tabsController.getState())
+    if (!view.isDestroyed()) {
+      view.send('tabs:state', tabsController.getState())
     }
   }
   tabsController.subscribe(broadcastState)
@@ -239,8 +239,8 @@ export async function attachTabs(
     menu.append(new MenuItem({
       label: 'Rename tab',
       click: () => {
-        if (!terminalView.webContents.isDestroyed()) {
-          terminalView.webContents.send('tabs:start-rename', tabId)
+        if (!view.isDestroyed()) {
+          view.send('tabs:start-rename', tabId)
         }
       },
     }))
@@ -295,12 +295,12 @@ export interface SettingsBridge {
 }
 
 export function attachSettings(
-  terminalView: WebContentsView,
+  view: WebContents,
   settings: SettingsController,
 ): SettingsBridge {
   const broadcastUnsub = settings.subscribe(s => {
-    if (!terminalView.webContents.isDestroyed()) {
-      terminalView.webContents.send('settings:changed', s)
+    if (!view.isDestroyed()) {
+      view.send('settings:changed', s)
     }
   })
 
@@ -382,13 +382,13 @@ export interface YoutubeBridge {
 
 export async function attachYoutube(
   win: BrowserWindow,
-  terminalView: WebContentsView,
+  view: WebContents,
   settings: SettingsController,
 ): Promise<YoutubeBridge> {
   let disposed = false
   let activeLoginWin: BrowserWindow | null = null
 
-  const adBlock = await createAdBlockController(terminalView.webContents.session)
+  const adBlock = await createAdBlockController(view.session)
   await adBlock.setEnabled(settings.getSettings().adBlockEnabled)
 
   const VIDEO_FILL_CSS = `
@@ -633,10 +633,10 @@ html.youterm-video-fill video.video-stream {
   }
 
   async function applyVideoFillToAllYoutubeFrames(): Promise<void> {
-    if (terminalView.webContents.isDestroyed()) return
+    if (view.isDestroyed()) return
     const enabled = settings.getSettings().videoFillMode
     const adBlockEnabled = settings.getSettings().adBlockEnabled
-    const frames = terminalView.webContents.mainFrame.frames
+    const frames = view.mainFrame.frames
     for (const frame of frames) {
       if (frame.url && /^https:\/\/(?:[a-z0-9-]+\.)*youtube\.com/i.test(frame.url)) {
         await ensureVideoFillStyle(frame)
@@ -675,7 +675,7 @@ html.youterm-video-fill video.video-stream {
       activeLoginWin.webContents.loadURL(url).catch(() => {})
       return
     }
-    const terminalSession = terminalView.webContents.session
+    const terminalSession = view.session
     const loginWin = new BrowserWindow({
       width: 480,
       height: 640,
@@ -696,8 +696,8 @@ html.youterm-video-fill video.video-stream {
       if (isYoutubeHomeUrl(currentUrl)) {
         // Login complete; close popup and reload iframe to pick up new cookies
         if (!loginWin.isDestroyed()) loginWin.close()
-        if (!terminalView.webContents.isDestroyed()) {
-          terminalView.webContents.send('youtube:reload')
+        if (!view.isDestroyed()) {
+          view.send('youtube:reload')
         }
       }
     }
@@ -710,7 +710,7 @@ html.youterm-video-fill video.video-stream {
     loginWin.loadURL(url).catch(() => {})
   }
 
-  terminalView.webContents.on('did-frame-navigate', onFrameNavigate)
+  view.on('did-frame-navigate', onFrameNavigate)
   // will-frame-navigate signature: (event, url, isMainFrame, frameProcessId, frameRoutingId)
   // Use a wrapper that matches Electron's type
   const onWillFrameNavigateWrapper = (event: Electron.Event) => {
@@ -718,22 +718,22 @@ html.youterm-video-fill video.video-stream {
     onWillFrameNavigate(event as Electron.Event & { url: string })
   }
   // Older Electron used 'will-navigate' for same-origin frame nav; prefer 'will-frame-navigate' for all frames
-  terminalView.webContents.on('will-frame-navigate', onWillFrameNavigateWrapper)
+  view.on('will-frame-navigate', onWillFrameNavigateWrapper)
 
   const onFrameFinishLoad = async (_e: unknown, isMainFrame: boolean) => {
     if (isMainFrame) return
     if (disposed) return
     await applyVideoFillToAllYoutubeFrames()
   }
-  terminalView.webContents.on('did-frame-finish-load', onFrameFinishLoad)
+  view.on('did-frame-finish-load', onFrameFinishLoad)
 
   // Playback position: every 10s, read video.currentTime from the YouTube frame
   // and append/update &t=<sec> in the persisted URL so we can resume on restart.
   const PLAYBACK_POLL_INTERVAL_MS = 10_000
 
   const getYoutubeFrame = () => {
-    if (terminalView.webContents.isDestroyed()) return null
-    const frames = terminalView.webContents.mainFrame.frames
+    if (view.isDestroyed()) return null
+    const frames = view.mainFrame.frames
     for (const frame of frames) {
       if (frame.url && /^https:\/\/(?:[a-z0-9-]+\.)*youtube\.com/i.test(frame.url)) {
         return frame
@@ -785,8 +785,8 @@ html.youterm-video-fill video.video-stream {
       lastAdBlockState = s.adBlockEnabled
       await adBlock.setEnabled(s.adBlockEnabled)
       // Reload iframe so filter change takes effect immediately
-      if (!terminalView.webContents.isDestroyed()) {
-        terminalView.webContents.send('youtube:reload')
+      if (!view.isDestroyed()) {
+        view.send('youtube:reload')
       }
     }
   })
@@ -794,17 +794,17 @@ html.youterm-video-fill video.video-stream {
   return {
     flushPlayback: pollPlayback,
     async reloadAdBlockAndIframe() {
-      if (!terminalView.webContents.isDestroyed()) {
-        terminalView.webContents.send('youtube:reload')
+      if (!view.isDestroyed()) {
+        view.send('youtube:reload')
       }
     },
     dispose() {
       disposed = true
       clearInterval(pollInterval)
       settingsUnsub()
-      terminalView.webContents.removeListener('did-frame-navigate', onFrameNavigate)
-      terminalView.webContents.removeListener('will-frame-navigate', onWillFrameNavigateWrapper)
-      terminalView.webContents.removeListener('did-frame-finish-load', onFrameFinishLoad)
+      view.removeListener('did-frame-navigate', onFrameNavigate)
+      view.removeListener('will-frame-navigate', onWillFrameNavigateWrapper)
+      view.removeListener('did-frame-finish-load', onFrameFinishLoad)
       if (activeLoginWin && !activeLoginWin.isDestroyed()) activeLoginWin.close()
       adBlock.dispose()
     },

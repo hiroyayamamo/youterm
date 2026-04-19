@@ -23,8 +23,8 @@ export function installShortcuts(
     if (ctrl.getState().mode === 'youtube-only') {
       ctrl.dispatch({ type: 'set-mode', mode: 'overlay' })
     }
-    if (!bundle.terminalView.webContents.isDestroyed()) {
-      bundle.terminalView.webContents.send('panel:toggle')
+    if (!bundle.win.webContents.isDestroyed()) {
+      bundle.win.webContents.send('panel:toggle')
     }
   }
 
@@ -43,7 +43,7 @@ export function installShortcuts(
   }
 
   const toggleVideoPlayback = async () => {
-    const tv = bundle.terminalView
+    const tv = bundle.win
     if (tv.webContents.isDestroyed()) return
     const frames = tv.webContents.mainFrame.frames
     for (const frame of frames) {
@@ -142,20 +142,11 @@ export function installShortcuts(
         },
         { type: 'separator' },
         { label: 'Reload YouTube', accelerator: 'Cmd+R', click: () => { void youtube.reloadAdBlockAndIframe() } },
-        { label: 'Hard Reload', accelerator: 'Cmd+Shift+R', click: () => bundle.terminalView.webContents.reloadIgnoringCache() },
+        { label: 'Hard Reload', accelerator: 'Cmd+Shift+R', click: () => bundle.win.webContents.reloadIgnoringCache() },
         { type: 'separator' },
         {
-          label: 'Toggle DevTools (Terminal)',
+          label: 'Toggle DevTools',
           accelerator: 'Cmd+Alt+I',
-          click: () => {
-            const wc = bundle.terminalView.webContents
-            if (wc.isDevToolsOpened()) wc.closeDevTools()
-            else wc.openDevTools({ mode: 'detach' })
-          },
-        },
-        {
-          label: 'Toggle DevTools (Window)',
-          accelerator: 'Cmd+Alt+Shift+I',
           click: () => {
             const wc = bundle.win.webContents
             if (wc.isDevToolsOpened()) wc.closeDevTools()
