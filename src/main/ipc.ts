@@ -113,39 +113,49 @@ export async function attachTabs(
     })
   }
 
-  // Startup splash: send ASCII art to each spawned tab, buffered until the
-  // renderer signals it's ready (renderer must register onPtyData before splash arrives).
+  // Per-tab delivery buffer. Every pty output for a tab — starting with the
+  // splash written by onSpawn and followed by any early shell output — is
+  // accumulated here until the renderer confirms it has created the xterm
+  // runtime for that tab (via `terminal:runtime-ready`). After the signal, we
+  // flush everything in insertion order and forward subsequent data directly.
+  // Without this buffer, Cmd+T's splash raced with the `tabs:state` broadcast
+  // and was dropped by the renderer because the runtime didn't exist yet.
   const splash = buildSplash(app.getVersion())
-  let rendererReady = false
-  const pendingSplashTabs: string[] = []
+  const readyTabs = new Set<string>()
+  const pendingByTab = new Map<string, string>()
 
-  const flushPendingSplashes = () => {
-    if (terminalView.webContents.isDestroyed()) return
-    for (const tabId of pendingSplashTabs) {
-      terminalView.webContents.send('pty:data', { tabId, data: splash })
-    }
-    pendingSplashTabs.length = 0
+  const enqueueForTab = (tabId: string, data: string) => {
+    pendingByTab.set(tabId, (pendingByTab.get(tabId) ?? '') + data)
   }
 
-  const sendSplashForTab = (tabId: string) => {
-    if (rendererReady) {
+  const sendOrBuffer = (tabId: string, data: string) => {
+    if (readyTabs.has(tabId)) {
       if (!terminalView.webContents.isDestroyed()) {
-        terminalView.webContents.send('pty:data', { tabId, data: splash })
+        terminalView.webContents.send('pty:data', { tabId, data })
       }
     } else {
-      pendingSplashTabs.push(tabId)
+      enqueueForTab(tabId, data)
     }
   }
 
-  const handleTerminalReady = () => {
-    rendererReady = true
-    flushPendingSplashes()
-  }
-  ipcMain.handle('terminal:ready', handleTerminalReady)
+  const sendSplashForTab = (tabId: string) => enqueueForTab(tabId, splash)
 
-  // If renderer reloads (e.g., Cmd+Shift+R), reset ready state so new init cycle re-sends splash
+  const handleRuntimeReady = (_e: unknown, tabId: unknown) => {
+    if (typeof tabId !== 'string') return
+    readyTabs.add(tabId)
+    const buffered = pendingByTab.get(tabId)
+    pendingByTab.delete(tabId)
+    if (buffered && !terminalView.webContents.isDestroyed()) {
+      terminalView.webContents.send('pty:data', { tabId, data: buffered })
+    }
+  }
+  ipcMain.on('terminal:runtime-ready', handleRuntimeReady)
+
+  // Renderer reload (Cmd+Shift+R) discards all runtimes — clear so each tab
+  // re-signals runtime-ready after re-init and we can flush a fresh splash.
   const onDidStartLoading = () => {
-    rendererReady = false
+    readyTabs.clear()
+    pendingByTab.clear()
   }
   terminalView.webContents.on('did-start-loading', onDidStartLoading)
 
@@ -163,11 +173,7 @@ export async function attachTabs(
       })
       return response === 0
     },
-    onData: (tabId, data) => {
-      if (!terminalView.webContents.isDestroyed()) {
-        terminalView.webContents.send('pty:data', { tabId, data })
-      }
-    },
+    onData: (tabId, data) => sendOrBuffer(tabId, data),
     store: tabsStore,
     getCwdForPid,
     onSpawn: sendSplashForTab,
@@ -268,7 +274,7 @@ export async function attachTabs(
       ipcMain.removeListener('pty:resize', onResize)
       ipcMain.removeListener('tabs:context-menu', onContextMenu)
       ipcMain.removeHandler('tabs:get-initial')
-      ipcMain.removeHandler('terminal:ready')
+      ipcMain.removeListener('terminal:runtime-ready', handleRuntimeReady)
       if (!terminalView.webContents.isDestroyed()) {
         terminalView.webContents.removeListener('did-start-loading', onDidStartLoading)
       }

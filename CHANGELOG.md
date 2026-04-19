@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.14.4] — 2026-04-20
+
+### Fixed
+- **Cmd+T 新規タブのスプラッシュ表示を、per-tab の runtime-ready シグナル方式に切り替え**(v0.14.3 の順序変更では直らなかった)
+  - 原因: `apply` → `spawnFor` の順にしても、`tabs:state` と `pty:data` が別チャネルで送られるため renderer 側で `ensureRuntime` が完了する前に splash が到達するタイミングが残っていた
+  - 対応: main 側に **per-tab の送信バッファ**(`pendingByTab` + `readyTabs`)を用意。splash と初期の shell 出力はすべて該当タブの buffer に積み、renderer が該当タブの xterm を作り終えた瞬間に送ってくる **`terminal:runtime-ready` シグナル**を受けて初めて flush → その後の pty 出力は直通
+  - renderer `ensureRuntime` 内で `window.youtermAPI.terminalRuntimeReady(tabId)` を呼ぶよう変更。従来のグローバル `terminal:ready` invoke は廃止
+  - Cmd+Shift+R(Hard Reload)での renderer 再読み込み時は `did-start-loading` で ready 集合とバッファを両方クリア → 再初期化後のタブがまた splash を受け取れる
+
+---
+
 ## [0.14.3] — 2026-04-20
 
 ### Fixed

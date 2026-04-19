@@ -91,5 +91,5 @@ contextBridge.exposeInMainWorld('youtermAPI', {
   tabsRename(tabId: string, name: string | null) { ipcRenderer.send('tabs:rename', { tabId, name }) },
   tabsContextMenu(tabId: string, x: number, y: number) { ipcRenderer.send('tabs:context-menu', { tabId, x, y }) },
 
-  terminalReady(): Promise<void> { return ipcRenderer.invoke('terminal:ready') },
+  terminalRuntimeReady(tabId: string) { ipcRenderer.send('terminal:runtime-ready', tabId) },
 })
