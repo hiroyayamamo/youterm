@@ -2,6 +2,24 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.14.2] — 2026-04-20
+
+### Changed (bisect release)
+- **フリーズ原因切り分けのため、広告ブロックを完全に無効化した状態で配布**
+  - v0.14.1 で fetch/XHR 差し替え・CDP 利用を消しても **動画クリック → 広告ロード時に Cmd+Q / Cmd+2 まで効かなくなる**フリーズが継続。残る容疑者は `@ghostery/adblocker-electron`(main プロセスの `session.webRequest` に登録される network filter)のみ
+  - 判定のため、この版では `createAdBlockController` を no-op 化(`enableBlockingInSession` を呼ばない)
+  - **期待結果**: v0.14.2 でフリーズが消えるなら adblocker-electron の webRequest 連携が真犯人。フリーズが継続するなら別経路を追う
+  - 広告は素通しになるが、DOM 監視スキップ(`#movie_player.ad-showing` を検知して skip ボタンクリック or 末尾シーク)は残しているため、広告に差し掛かっても即飛ばせる想定
+- **`adBlockEnabled` のデフォルトを `false` に変更**
+  - 新規ユーザー・設定リセット時のデフォルト。既存の `settings.json` で `true` だった場合もどの道 setEnabled が no-op なので挙動に差は無いが、UI 表示上は「OFF」で揃う
+
+### Fixed
+- **Cmd+Q が必ず効くようにタイムアウトガードを追加**(`before-quit` 内)
+  - `tabsBridge.tabsController.captureCwds()` と `youtubeBridge.flushPlayback()` をそれぞれ **500ms タイムアウト**で Promise.race。iframe や lsof が詰まっても自動で打ち切り → `app.quit()` に進む
+  - v0.13.x / v0.14.x で「iframe が広告ロードで詰まる → flushPlayback の `frame.executeJavaScript` が resolve せず before-quit が完走しない」経路で Cmd+Q が死ぬ現象を解消
+
+---
+
 ## [0.14.1] — 2026-04-20
 
 ### Removed

@@ -70,6 +70,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
+const QUIT_FLUSH_TIMEOUT_MS = 500
+const raceWithTimeout = <T>(p: Promise<T>, ms: number): Promise<T | undefined> =>
+  Promise.race([p, new Promise<undefined>(resolve => setTimeout(() => resolve(undefined), ms))])
+
 let quitting = false
 app.on('before-quit', async event => {
   if (quitting) return
@@ -78,10 +82,10 @@ app.on('before-quit', async event => {
   event.preventDefault()
   quitting = true
   try {
-    if (tabsBridge) await tabsBridge.tabsController.captureCwds()
+    if (tabsBridge) await raceWithTimeout(tabsBridge.tabsController.captureCwds(), QUIT_FLUSH_TIMEOUT_MS)
   } catch {}
   try {
-    if (youtubeBridge) await youtubeBridge.flushPlayback()
+    if (youtubeBridge) await raceWithTimeout(youtubeBridge.flushPlayback(), QUIT_FLUSH_TIMEOUT_MS)
   } catch {}
   app.quit()
 })
