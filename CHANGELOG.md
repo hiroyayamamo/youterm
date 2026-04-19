@@ -2,6 +2,20 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.14.10] — 2026-04-20 (diagnostic)
+
+### Added
+- **preload に drag-and-drop の診断ログ**(`[youterm-dnd]`)
+  - `preload loaded` — preload 自体が読み込まれたか
+  - `first dragover, types: [...]` — drag 開始時に dataTransfer の type に `Files` が含まれるか
+  - `drop fired, files: N, activeTabId: ID` — drop 時点でファイル数と active tab が取れているか
+  - `resolved path: ...` — `webUtils.getPathForFile` の返り値
+  - `sending pty:write ...` — IPC 送信時のログ
+  - DevTools Console を **top フレーム**に切り替えて(右上の frame 切替 selector)観測。YouTube iframe 側のログ(`about:blank` 由来)とは別モノ
+- 問題切り分けが済み次第、次リリースで削除する見込み
+
+---
+
 ## [0.14.9] — 2026-04-20
 
 ### Changed

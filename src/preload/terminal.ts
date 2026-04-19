@@ -97,32 +97,47 @@ contextBridge.exposeInMainWorld('youtermAPI', {
 })
 
 // Finder drag-and-drop handling is attached DIRECTLY in the preload so it
-// registers at document_start, before the renderer's async init() runs. If
-// these listeners are installed late, macOS sees "no drop target accepted"
-// and animates the file back to its origin — which is exactly the symptom we
-// were hitting while the handlers lived in the renderer's init path.
+// registers at document_start, before the renderer's async init() runs.
+// Diagnostic logs are intentionally verbose here — remove once the path is
+// proven. Look for `[youterm-dnd]` in DevTools Console (top frame).
+console.log('[youterm-dnd] preload loaded, webUtils type:', typeof webUtils, 'getPathForFile type:', typeof webUtils?.getPathForFile)
+
 const shellQuote = (p: string): string => `'${p.replace(/'/g, "'\\''")}'`
 
+let dragoverLogged = false
 const preventDefault = (e: DragEvent) => {
+  if (!dragoverLogged) {
+    dragoverLogged = true
+    console.log('[youterm-dnd] first dragover, types:', e.dataTransfer && Array.from(e.dataTransfer.types))
+  }
   if (!e.dataTransfer) return
   e.preventDefault()
   e.dataTransfer.dropEffect = 'copy'
 }
-document.addEventListener('dragenter', preventDefault, true)
+document.addEventListener('dragenter', e => {
+  console.log('[youterm-dnd] dragenter, types:', e.dataTransfer && Array.from(e.dataTransfer.types))
+  preventDefault(e)
+}, true)
 document.addEventListener('dragover', preventDefault, true)
 
 document.addEventListener('drop', e => {
+  console.log('[youterm-dnd] drop fired, files:', e.dataTransfer?.files.length, 'activeTabId:', activeTabId)
   e.preventDefault()
-  if (!activeTabId) return
+  if (!activeTabId) { console.warn('[youterm-dnd] no active tab, aborting'); return }
   const files = e.dataTransfer?.files
-  if (!files || files.length === 0) return
+  if (!files || files.length === 0) { console.warn('[youterm-dnd] no files on drop'); return }
   const parts: string[] = []
   for (const file of Array.from(files)) {
     try {
       const p = webUtils.getPathForFile(file)
+      console.log('[youterm-dnd] resolved path:', p, 'for file:', file.name)
       if (p) parts.push(shellQuote(p))
-    } catch {}
+    } catch (err) {
+      console.error('[youterm-dnd] getPathForFile threw:', err)
+    }
   }
-  if (parts.length === 0) return
-  ipcRenderer.send('pty:write', { tabId: activeTabId, data: parts.join(' ') + ' ' })
+  if (parts.length === 0) { console.warn('[youterm-dnd] no resolvable paths'); return }
+  const payload = parts.join(' ') + ' '
+  console.log('[youterm-dnd] sending pty:write', { tabId: activeTabId, payloadLength: payload.length })
+  ipcRenderer.send('pty:write', { tabId: activeTabId, data: payload })
 }, true)
