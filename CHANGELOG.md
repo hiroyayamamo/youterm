@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.5] — 2026-04-20
+
+### Changed
+- **bold テキスト色を Cyberpunk cyan(`rgb(0, 221, 255)`)に固定**
+  - 経緯: v0.13.0 で `brightWhite: rgb(0, 221, 255)` + `drawBoldTextInBrightColors: true` を組み合わせれば bold が cyan になると想定していたが、実際の xterm の挙動は **ANSI 色が付いた文字が bold の時に bright 変種に切り替える**だけで、**default foreground の bold(シェルプロンプトや見出し等)は通常 foreground の緑のまま**
+  - 対応: `style.css` に `.xterm .xterm-bold { color: rgb(0, 221, 255) !important }` を追加。prompts など未着色な bold もすべてネオンシアンに
+  - `brightWhite` のテーマ値(同色)はそのまま。ANSI bright-white が指定されたケースでも見た目が揃う
+
+---
+
 ## [0.15.4] — 2026-04-20
 
 ### Removed
