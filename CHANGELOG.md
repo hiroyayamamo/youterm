@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.14.7] — 2026-04-20
+
+### Fixed
+- **v0.14.6 のドラッグ&ドロップが効かなかった bug を修正**
+  - 原因: `#terminal-inner` に bubble phase で handler を付けていたため、Chromium が `file://` ナビゲーションの default action を実行する方が先に回ってしまい、drop event が届く前にレンダラが自己ナビゲートしてドロップが無効化されていた。さらに handler の冒頭で tabsState 等の validity check を return していたため、validity で弾かれた dragover では preventDefault すら呼ばれず、drop event そのものが発火しないケースもあった
+  - 対応: `document` レベル(`dragenter` / `dragover` / `drop`)に **capture phase**(`{ useCapture: true }` 相当の第三引数 `true`)でリスナを付与。handler の最初に必ず `preventDefault()` を呼び、そのあとで「files が無い」「tabsState 未初期化」等のスキップ判定を行うように順序を変更
+  - 結果: Finder からのドラッグはアプリ内のどこにドロップしてもアクティブタブの PTY に書き込まれる(overlay / terminal-only 時は視覚的に見える。youtube-only 時は見えないが書き込みはされるので、モード切替後に確認できる)
+
+---
+
 ## [0.14.6] — 2026-04-20
 
 ### Added
