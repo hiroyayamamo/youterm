@@ -142,6 +142,10 @@ async function init(): Promise<void> {
       } catch {}
     })
 
+    // Signal main that this tab's xterm is ready to receive pty:data so it
+    // can flush the buffered splash (and any early shell output) in order.
+    window.youtermAPI.terminalRuntimeReady(tabId)
+
     return runtime
   }
 
@@ -262,9 +266,6 @@ async function init(): Promise<void> {
   })
   observer.observe(termArea)
 
-  // Signal main that renderer is fully initialized and ready to receive pty data
-  // (in particular, the buffered startup splash).
-  try { await window.youtermAPI.terminalReady() } catch {}
 }
 
 init()
