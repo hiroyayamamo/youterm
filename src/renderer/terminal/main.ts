@@ -259,21 +259,26 @@ async function init(): Promise<void> {
   // pty, matching macOS Terminal.app behavior. Single-quote wrap with embedded
   // single quotes escaped as '\''. Paths are separated by spaces and followed
   // by a trailing space so the caret sits after the last path ready for a flag.
+  //
+  // Handlers are attached to the whole document in the capture phase so we
+  // ALWAYS preventDefault first — Chromium otherwise navigates the renderer to
+  // the dropped `file://` URL and drops are silently swallowed by xterm before
+  // a bubble-phase handler on #terminal-inner could see them.
   const shellQuote = (p: string): string => `'${p.replace(/'/g, "'\\''")}'`
 
-  termArea.addEventListener('dragover', e => {
+  const onDragEnterOrOver = (e: DragEvent) => {
     if (!e.dataTransfer) return
-    const hasFiles = Array.from(e.dataTransfer.types).includes('Files')
-    if (!hasFiles) return
     e.preventDefault()
     e.dataTransfer.dropEffect = 'copy'
-  })
+  }
+  document.addEventListener('dragenter', onDragEnterOrOver, true)
+  document.addEventListener('dragover', onDragEnterOrOver, true)
 
-  termArea.addEventListener('drop', e => {
-    if (!e.dataTransfer || !tabsState) return
-    const files = e.dataTransfer.files
-    if (!files || files.length === 0) return
+  document.addEventListener('drop', e => {
     e.preventDefault()
+    if (!tabsState) return
+    const files = e.dataTransfer?.files
+    if (!files || files.length === 0) return
     const parts: string[] = []
     for (const file of Array.from(files)) {
       const p = window.youtermAPI.getPathForFile(file)
@@ -281,7 +286,7 @@ async function init(): Promise<void> {
     }
     if (parts.length === 0) return
     window.youtermAPI.ptyWrite(tabsState.activeId, parts.join(' ') + ' ')
-  })
+  }, true)
 
   const observer = new ResizeObserver(() => {
     if (!tabsState) return
