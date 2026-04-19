@@ -486,63 +486,6 @@ html.youterm-video-fill video.video-stream {
   if (window.__youtermAdStripInstalled) return
   window.__youtermAdStripInstalled = true
 
-  const AD_FIELDS = ['playerAds', 'adPlacements', 'adSlots', 'adBreakHeartbeatParams', 'adBreakParams']
-  const stripAds = (obj) => {
-    if (!obj || typeof obj !== 'object') return obj
-    for (const f of AD_FIELDS) { if (f in obj) delete obj[f] }
-    return obj
-  }
-
-  const isPlayerApi = (url) => {
-    if (typeof url !== 'string') return false
-    return url.includes('/youtubei/v1/player') ||
-           url.includes('/get_video_info')
-  }
-
-  const origFetch = window.fetch
-  window.fetch = function(...args) {
-    const input = args[0]
-    const url = typeof input === 'string' ? input : (input && input.url)
-    if (!isPlayerApi(url)) return origFetch.apply(this, args)
-    return origFetch.apply(this, args).then(async (response) => {
-      if (!response || !response.ok) return response
-      try {
-        const text = await response.clone().text()
-        const data = JSON.parse(text)
-        stripAds(data)
-        return new Response(JSON.stringify(data), {
-          status: response.status,
-          statusText: response.statusText,
-          headers: response.headers,
-        })
-      } catch {
-        return response
-      }
-    })
-  }
-
-  const origOpen = XMLHttpRequest.prototype.open
-  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-    this.__youtermUrl = url
-    return origOpen.apply(this, [method, url, ...rest])
-  }
-
-  const origSend = XMLHttpRequest.prototype.send
-  XMLHttpRequest.prototype.send = function(...args) {
-    if (isPlayerApi(this.__youtermUrl)) {
-      this.addEventListener('load', () => {
-        try {
-          const data = JSON.parse(this.responseText)
-          stripAds(data)
-          const modified = JSON.stringify(data)
-          Object.defineProperty(this, 'responseText', { configurable: true, get: () => modified })
-          Object.defineProperty(this, 'response', { configurable: true, get: () => modified })
-        } catch {}
-      })
-    }
-    return origSend.apply(this, args)
-  }
-
   // DOM-level ad skip: detect #movie_player.ad-showing and skip via button or fast-forward
   const aggressiveClick = (el) => {
     try { el.click() } catch {}
@@ -675,43 +618,6 @@ html.youterm-video-fill video.video-stream {
     try {
       await frame.executeJavaScript(AD_STRIP_SCRIPT)
     } catch {}
-  }
-
-  // CDP-based installer: script runs in EVERY document (incl. iframes) at document-start,
-  // before any page JS. Catches the initial /youtubei/v1/player call on first load.
-  let adStripScriptId: string | null = null
-
-  const installAdStripViaCDP = async (): Promise<void> => {
-    try {
-      if (!terminalView.webContents.debugger.isAttached()) {
-        terminalView.webContents.debugger.attach('1.3')
-      }
-      await terminalView.webContents.debugger.sendCommand('Page.enable')
-      const result = await terminalView.webContents.debugger.sendCommand(
-        'Page.addScriptToEvaluateOnNewDocument',
-        { source: AD_STRIP_SCRIPT },
-      )
-      adStripScriptId = (result as { identifier?: string }).identifier ?? null
-    } catch (err) {
-      console.error('[adStrip] CDP install failed:', err)
-    }
-  }
-
-  const uninstallAdStripViaCDP = async (): Promise<void> => {
-    if (!adStripScriptId) return
-    try {
-      await terminalView.webContents.debugger.sendCommand(
-        'Page.removeScriptToEvaluateOnNewDocument',
-        { identifier: adStripScriptId },
-      )
-    } catch (err) {
-      console.error('[adStrip] CDP uninstall failed:', err)
-    }
-    adStripScriptId = null
-  }
-
-  if (settings.getSettings().adBlockEnabled) {
-    await installAdStripViaCDP()
   }
 
   async function applyVideoFillToAllYoutubeFrames(): Promise<void> {
@@ -866,11 +772,6 @@ html.youterm-video-fill video.video-stream {
     if (s.adBlockEnabled !== lastAdBlockState) {
       lastAdBlockState = s.adBlockEnabled
       await adBlock.setEnabled(s.adBlockEnabled)
-      if (s.adBlockEnabled) {
-        await installAdStripViaCDP()
-      } else {
-        await uninstallAdStripViaCDP()
-      }
       // Reload iframe so filter change takes effect immediately
       if (!terminalView.webContents.isDestroyed()) {
         terminalView.webContents.send('youtube:reload')
@@ -881,14 +782,6 @@ html.youterm-video-fill video.video-stream {
   return {
     flushPlayback: pollPlayback,
     async reloadAdBlockAndIframe() {
-      try {
-        if (settings.getSettings().adBlockEnabled) {
-          await uninstallAdStripViaCDP()
-          await installAdStripViaCDP()
-        }
-      } catch (err) {
-        console.error('[adBlock] reload cycle failed:', err)
-      }
       if (!terminalView.webContents.isDestroyed()) {
         terminalView.webContents.send('youtube:reload')
       }
@@ -902,12 +795,6 @@ html.youterm-video-fill video.video-stream {
       terminalView.webContents.removeListener('did-frame-finish-load', onFrameFinishLoad)
       if (activeLoginWin && !activeLoginWin.isDestroyed()) activeLoginWin.close()
       adBlock.dispose()
-      // CDP cleanup
-      try {
-        if (terminalView.webContents.debugger.isAttached()) {
-          terminalView.webContents.debugger.detach()
-        }
-      } catch {}
     },
   }
 }
