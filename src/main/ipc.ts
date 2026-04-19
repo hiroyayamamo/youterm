@@ -710,119 +710,8 @@ html.youterm-video-fill video.video-stream {
     adStripScriptId = null
   }
 
-  // Additional layer: CDP Fetch domain intercepts /youtubei/v1/player* responses
-  // at the network layer. This catches initial-load ads that script injection timing misses.
-  const AD_FIELDS_TO_STRIP = ['playerAds', 'adPlacements', 'adSlots', 'adBreakHeartbeatParams', 'adBreakParams']
-  let fetchInterceptEnabled = false
-  let debuggerMessageListener: ((event: Electron.Event, method: string, params: Record<string, unknown>) => void) | null = null
-
-  const stripAdsFromBody = (raw: string): string | null => {
-    try {
-      const data = JSON.parse(raw) as Record<string, unknown>
-      let modified = false
-      for (const f of AD_FIELDS_TO_STRIP) {
-        if (f in data) {
-          delete data[f]
-          modified = true
-        }
-      }
-      if (!modified) return null
-      return JSON.stringify(data)
-    } catch {
-      return null
-    }
-  }
-
-  const handleFetchRequestPaused = async (params: Record<string, unknown>) => {
-    const dbg = terminalView.webContents.debugger
-    const reqId = params.requestId as string
-    const responseStatusCode = params.responseStatusCode as number | undefined
-
-    if (!responseStatusCode) {
-      // Request stage (shouldn't happen since we set requestStage: 'Response', but be safe)
-      try { await dbg.sendCommand('Fetch.continueRequest', { requestId: reqId }) } catch {}
-      return
-    }
-
-    try {
-      // 3-second timeout on body read to avoid network hangs blocking the request forever
-      const TIMEOUT_MS = 3000
-      const bodyPromise = dbg.sendCommand('Fetch.getResponseBody', { requestId: reqId })
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('getResponseBody timeout')), TIMEOUT_MS),
-      )
-      const bodyResult = (await Promise.race([bodyPromise, timeoutPromise])) as {
-        body: string
-        base64Encoded: boolean
-      }
-      const raw = bodyResult.base64Encoded
-        ? Buffer.from(bodyResult.body, 'base64').toString('utf-8')
-        : bodyResult.body
-      const modified = stripAdsFromBody(raw)
-      if (!modified) {
-        await dbg.sendCommand('Fetch.continueResponse', { requestId: reqId })
-        return
-      }
-      const modifiedBase64 = Buffer.from(modified, 'utf-8').toString('base64')
-      const origHeaders = (params.responseHeaders as Array<{ name: string; value: string }> | undefined) ?? []
-      const newHeaders = origHeaders
-        .filter(h => {
-          const n = h.name.toLowerCase()
-          return n !== 'content-length' && n !== 'content-encoding'
-        })
-        .concat([{ name: 'Content-Length', value: String(Buffer.byteLength(modified)) }])
-      await dbg.sendCommand('Fetch.fulfillRequest', {
-        requestId: reqId,
-        responseCode: responseStatusCode,
-        responseHeaders: newHeaders,
-        body: modifiedBase64,
-      })
-    } catch {
-      try { await dbg.sendCommand('Fetch.continueResponse', { requestId: reqId }) } catch {}
-    }
-  }
-
-  const installFetchIntercept = async (): Promise<void> => {
-    if (fetchInterceptEnabled) return
-    try {
-      const dbg = terminalView.webContents.debugger
-      if (!dbg.isAttached()) dbg.attach('1.3')
-      await dbg.sendCommand('Fetch.enable', {
-        patterns: [
-          { urlPattern: 'https://www.youtube.com/youtubei/v1/player*', requestStage: 'Response' },
-          { urlPattern: 'https://m.youtube.com/youtubei/v1/player*', requestStage: 'Response' },
-        ],
-      })
-      debuggerMessageListener = (_event, method, params) => {
-        if (method === 'Fetch.requestPaused') {
-          void handleFetchRequestPaused(params as Record<string, unknown>)
-        }
-      }
-      dbg.on('message', debuggerMessageListener)
-      fetchInterceptEnabled = true
-    } catch (err) {
-      console.error('[adStrip] CDP Fetch intercept install failed:', err)
-    }
-  }
-
-  const uninstallFetchIntercept = async (): Promise<void> => {
-    if (!fetchInterceptEnabled) return
-    const dbg = terminalView.webContents.debugger
-    try {
-      if (debuggerMessageListener) {
-        dbg.removeListener('message', debuggerMessageListener)
-        debuggerMessageListener = null
-      }
-      await dbg.sendCommand('Fetch.disable')
-    } catch (err) {
-      console.error('[adStrip] CDP Fetch intercept uninstall failed:', err)
-    }
-    fetchInterceptEnabled = false
-  }
-
   if (settings.getSettings().adBlockEnabled) {
     await installAdStripViaCDP()
-    await installFetchIntercept()
   }
 
   async function applyVideoFillToAllYoutubeFrames(): Promise<void> {
@@ -979,10 +868,8 @@ html.youterm-video-fill video.video-stream {
       await adBlock.setEnabled(s.adBlockEnabled)
       if (s.adBlockEnabled) {
         await installAdStripViaCDP()
-        await installFetchIntercept()
       } else {
         await uninstallAdStripViaCDP()
-        await uninstallFetchIntercept()
       }
       // Reload iframe so filter change takes effect immediately
       if (!terminalView.webContents.isDestroyed()) {
@@ -996,10 +883,8 @@ html.youterm-video-fill video.video-stream {
     async reloadAdBlockAndIframe() {
       try {
         if (settings.getSettings().adBlockEnabled) {
-          await uninstallFetchIntercept()
           await uninstallAdStripViaCDP()
           await installAdStripViaCDP()
-          await installFetchIntercept()
         }
       } catch (err) {
         console.error('[adBlock] reload cycle failed:', err)
@@ -1018,12 +903,6 @@ html.youterm-video-fill video.video-stream {
       if (activeLoginWin && !activeLoginWin.isDestroyed()) activeLoginWin.close()
       adBlock.dispose()
       // CDP cleanup
-      if (debuggerMessageListener) {
-        try {
-          terminalView.webContents.debugger.removeListener('message', debuggerMessageListener)
-        } catch {}
-        debuggerMessageListener = null
-      }
       try {
         if (terminalView.webContents.debugger.isAttached()) {
           terminalView.webContents.debugger.detach()
