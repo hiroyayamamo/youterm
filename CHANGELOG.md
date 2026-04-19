@@ -2,6 +2,15 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.12.3] — 2026-04-19
+
+### Changed
+- **起動時の「常に YouTube TOP」を revert、保存 URL 復元を再有効化**
+  - v0.12.2 で一時的にコメントアウトしていた `initialSettings.youtubeLastUrl` 読み込みを復活
+  - v0.12.2 の `/next` CDP Fetch intercept 削除により SPA ナビゲーション問題は根本解決したため、URL 復元は安全に動作する
+
+---
+
 ## [0.12.2] — 2026-04-19
 
 ### Fixed
