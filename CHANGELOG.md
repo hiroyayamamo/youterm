@@ -2,6 +2,24 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.13.0] — 2026-04-19
+
+### Added
+- **Cyberpunk Neon カラーパレット** — xterm のテーマを 16 ANSI 色フルセット(+選択背景、カーソルアクセント)に拡張。黒背景に映える蛍光カラー
+  - foreground: rgb(40, 254, 20)(緑)
+  - red: rgb(255, 51, 102)(ネオンピンク)
+  - green: rgb(40, 254, 20)
+  - yellow: rgb(255, 215, 0)(ゴールド)
+  - blue: rgb(0, 162, 255)(電光ブルー)
+  - magenta: rgb(255, 0, 255)(ネオンマゼンタ)
+  - cyan: rgb(0, 221, 255)
+  - white: rgb(224, 224, 224)
+  - bright 系は各色を更に明るく(+brightWhite のみ既存の cyan を維持、bold テキスト色として)
+  - selection background: 緑の半透明
+  - ls / git status / syntax highlighting / tmux / claude code の出力が色豊かに見える
+
+---
+
 ## [0.12.4] — 2026-04-19
 
 ### Fixed
