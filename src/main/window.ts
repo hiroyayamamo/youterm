@@ -15,6 +15,15 @@ export function createMainWindow(): WindowBundle {
     height: 800,
     show: false,
     backgroundColor: '#000000',
+    webPreferences: {
+      // Root preload owns Finder drag-and-drop. On Electron 32 + macOS,
+      // native drops from Finder hit the BrowserWindow's root webContents
+      // rather than the child WebContentsView, so the handler has to live
+      // here too.
+      preload: join(__dirname, '../preload/root.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
   })
 
   // Prevent Electron from auto-syncing window title with HTML <title>;

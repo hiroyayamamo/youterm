@@ -247,6 +247,14 @@ export async function attachTabs(
     menu.popup({ window: win, x: Math.round(x), y: Math.round(y) })
   }
 
+  // Finder drag-and-drop from either preload (root or terminal): a single
+  // string payload is written to the currently active tab's pty.
+  const onDndDrop = (_e: unknown, payload: unknown) => {
+    if (typeof payload !== 'string' || payload.length === 0) return
+    const state = tabsController.getState()
+    tabsController.write(state.activeId, payload)
+  }
+
   ipcMain.on('tabs:new', onNew)
   ipcMain.on('tabs:close', onClose)
   ipcMain.on('tabs:activate', onActivate)
@@ -254,6 +262,7 @@ export async function attachTabs(
   ipcMain.on('pty:write', onWrite)
   ipcMain.on('pty:resize', onResize)
   ipcMain.on('tabs:context-menu', onContextMenu)
+  ipcMain.on('dnd:drop', onDndDrop)
 
   const handleGetInitial = () => tabsController.getState()
   ipcMain.handle('tabs:get-initial', handleGetInitial)
@@ -272,6 +281,7 @@ export async function attachTabs(
       ipcMain.removeListener('pty:write', onWrite)
       ipcMain.removeListener('pty:resize', onResize)
       ipcMain.removeListener('tabs:context-menu', onContextMenu)
+      ipcMain.removeListener('dnd:drop', onDndDrop)
       ipcMain.removeHandler('tabs:get-initial')
       ipcMain.removeListener('terminal:runtime-ready', handleRuntimeReady)
       tabsController.disposeAll()

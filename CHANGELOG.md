@@ -2,6 +2,19 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.14.11] — 2026-04-20
+
+### Fixed
+- **ドラッグ&ドロップが全く反応しない問題の根本解消 — root BrowserWindow にも preload を付与**
+  - 原因の確定: 前バージョンまでは drag-and-drop の handler を WebContentsView(terminal)側の preload にしか付けていなかった。が、**Electron 32 + macOS では native の Finder drop が親 BrowserWindow の root webContents に飛ぶ**ので、子の WebContentsView では `dragenter` すら発火しない(ユーザーの v0.14.10 テストで Console に一切ログが出なかったことで確定)
+  - 対応: 新規 preload `src/preload/root.ts` を追加し、**root BrowserWindow の `webPreferences.preload` に設定**。同じ capture-phase / preventDefault / `webUtils.getPathForFile` / shell quote ロジックを持つ
+  - drop 後は新規 IPC `dnd:drop` でメインに payload(シェルエスケープ済み文字列)を送信。main 側は `tabsController.getState().activeId` のタブの PTY に `write` する
+  - terminal 側 preload の drop handler は残しているが、送信先を `dnd:drop` に一本化(どちらの preload が drop を受けても同じ経路)
+  - `electron.vite.config.ts` の preload エントリに `root` を追加、ビルドで `out/preload/root.js` が出力される
+  - 診断ログ(`[youterm-dnd]` / `[youterm-dnd-root]`)は引き続き有効。root 側は **BrowserWindow root の DevTools**(`Cmd+Alt+Shift+I`)で観測、terminal 側は `Cmd+Alt+I` で観測
+
+---
+
 ## [0.14.10] — 2026-04-20 (diagnostic)
 
 ### Added
