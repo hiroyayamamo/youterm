@@ -30,6 +30,14 @@ export function createMainWindow(): WindowBundle {
     win.loadFile(join(__dirname, '../../index.html'))
   }
 
+  // If a Finder drop ever reaches the root BrowserWindow's webContents (which
+  // has no preload), Chromium's default is to navigate the frame to the
+  // dropped file:// URL. Block that so the drop is simply ignored here and
+  // the preload handler on the WebContentsView can own the interaction.
+  win.webContents.on('will-navigate', (event, url) => {
+    if (url.startsWith('file://')) event.preventDefault()
+  })
+
   const terminalSession = session.fromPartition('persist:terminal')
 
   // Allow YouTube iframe embedding: strip X-Frame-Options / frame-ancestors
@@ -92,6 +100,13 @@ export function createMainWindow(): WindowBundle {
   } else {
     terminalView.webContents.loadFile(join(__dirname, '../renderer/terminal/index.html'))
   }
+
+  // Same defense as above: if a drop's default file:// navigation survives
+  // past the preload handler, cancel it in main so we don't accidentally
+  // replace the terminal page with the dropped file's contents.
+  terminalView.webContents.on('will-navigate', (event, url) => {
+    if (url.startsWith('file://')) event.preventDefault()
+  })
 
   win.contentView.addChildView(terminalView)
 
