@@ -1,5 +1,3 @@
-import { ElectronBlocker } from '@ghostery/adblocker-electron'
-import { adsAndTrackingLists } from '@ghostery/adblocker'
 import type { Session } from 'electron'
 
 export interface AdBlockController {
@@ -7,48 +5,12 @@ export interface AdBlockController {
   dispose(): void
 }
 
-export async function createAdBlockController(session: Session): Promise<AdBlockController> {
-  let blocker: ElectronBlocker | null = null
-  try {
-    // NOTE: Cosmetic filters require session.registerPreloadScript which was
-    // added in Electron 35. We're on Electron 32 (as of v0.7.0), so we
-    // disable cosmetic filters and rely on network filtering only. YouTube ad
-    // blocking works primarily via network rules against googleads.g.doubleclick.net
-    // and youtubei/v1/player responses.
-    blocker = await ElectronBlocker.fromLists(fetch, adsAndTrackingLists, {
-      loadCosmeticFilters: false,
-      loadNetworkFilters: true,
-    })
-  } catch (err) {
-    console.error('[adBlock] failed to fetch filter lists; ad blocking disabled:', err)
-  }
-
-  let active = false
-
-  const setEnabled = async (enabled: boolean): Promise<void> => {
-    if (!blocker) return
-    if (enabled === active) return
-    try {
-      if (enabled) {
-        blocker.enableBlockingInSession(session)
-      } else {
-        blocker.disableBlockingInSession(session)
-      }
-      active = enabled
-    } catch (err) {
-      console.error('[adBlock] failed to toggle blocker:', err)
-    }
-  }
-
+// v0.14.2 bisect: adblocker-electron fully disabled to isolate freeze cause.
+// The controller is preserved so the rest of the app (settings toggle, IPC,
+// subscribe callbacks) keeps working; setEnabled is a no-op here.
+export async function createAdBlockController(_session: Session): Promise<AdBlockController> {
   return {
-    setEnabled,
-    dispose() {
-      if (blocker && active) {
-        try {
-          blocker.disableBlockingInSession(session)
-        } catch {}
-      }
-      active = false
-    },
+    async setEnabled(_enabled: boolean): Promise<void> {},
+    dispose() {},
   }
 }
