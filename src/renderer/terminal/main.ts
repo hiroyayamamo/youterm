@@ -255,6 +255,34 @@ async function init(): Promise<void> {
     console.error('[renderer] failed to load initial tabs:', err)
   }
 
+  // Drag & drop Finder items: write shell-quoted paths into the active tab's
+  // pty, matching macOS Terminal.app behavior. Single-quote wrap with embedded
+  // single quotes escaped as '\''. Paths are separated by spaces and followed
+  // by a trailing space so the caret sits after the last path ready for a flag.
+  const shellQuote = (p: string): string => `'${p.replace(/'/g, "'\\''")}'`
+
+  termArea.addEventListener('dragover', e => {
+    if (!e.dataTransfer) return
+    const hasFiles = Array.from(e.dataTransfer.types).includes('Files')
+    if (!hasFiles) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  })
+
+  termArea.addEventListener('drop', e => {
+    if (!e.dataTransfer || !tabsState) return
+    const files = e.dataTransfer.files
+    if (!files || files.length === 0) return
+    e.preventDefault()
+    const parts: string[] = []
+    for (const file of Array.from(files)) {
+      const p = window.youtermAPI.getPathForFile(file)
+      if (p) parts.push(shellQuote(p))
+    }
+    if (parts.length === 0) return
+    window.youtermAPI.ptyWrite(tabsState.activeId, parts.join(' ') + ' ')
+  })
+
   const observer = new ResizeObserver(() => {
     if (!tabsState) return
     const r = runtimes.get(tabsState.activeId)
