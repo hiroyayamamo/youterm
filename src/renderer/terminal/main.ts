@@ -205,17 +205,23 @@ async function init(): Promise<void> {
     document.body.classList.remove('mode-youtube-only', 'mode-overlay', 'mode-terminal-only')
     document.body.classList.add(`mode-${mode}`)
   }
+  const applyInputTargetClass = (inputTarget: string) => {
+    document.body.classList.remove('input-terminal', 'input-youtube')
+    document.body.classList.add(`input-${inputTarget}`)
+  }
 
   // Pull initial mode state explicitly (avoid race with push-based state:changed)
   try {
     const initialState = await window.youtermAPI.stateGetInitial()
     applyModeClass(initialState.mode)
+    applyInputTargetClass(initialState.inputTarget)
   } catch (err) {
     console.error('[renderer] failed to load initial state:', err)
   }
 
   window.youtermAPI.onStateChanged(state => {
     applyModeClass(state.mode)
+    applyInputTargetClass(state.inputTarget)
     const iframe = document.getElementById('youtube-iframe') as HTMLIFrameElement | null
     if (state.mode === 'youtube-only') {
       iframe?.focus()

@@ -98,44 +98,19 @@ contextBridge.exposeInMainWorld('youtermAPI', {
 
 // Finder drag-and-drop handling is attached directly in the preload so it
 // registers at document_start, before the renderer's async init() runs.
-//
-// In overlay mode the YouTube iframe sits below a semi-transparent
-// #terminal-root. Chromium's drag hit-testing picks the iframe — not the
-// stacked-higher terminal-root — whenever the iframe has default
-// pointer-events, because cross-origin iframes claim drops directly even
-// when a sibling with higher z-index visually overlaps. The fix is to
-// temporarily set `pointer-events: none` on the iframe while a drag is in
-// progress, then restore it on drop or when the cursor leaves the window.
-// Regular clicks on YouTube (play/pause, seek) are untouched.
+// Iframe inertness (to avoid Chromium's OOPIF routing swallowing drops into
+// the YouTube frame) is handled via CSS on body classes, not here.
 const shellQuote = (p: string): string => `'${p.replace(/'/g, "'\\''")}'`
-
-const iframeEl = () => document.getElementById('youtube-iframe') as HTMLIFrameElement | null
-const setIframeInert = (inert: boolean) => {
-  const f = iframeEl()
-  if (f) f.style.pointerEvents = inert ? 'none' : ''
-}
 
 const preventDefault = (e: DragEvent) => {
   if (!e.dataTransfer) return
   e.preventDefault()
   e.dataTransfer.dropEffect = 'copy'
 }
-
-document.addEventListener('dragenter', e => {
-  setIframeInert(true)
-  preventDefault(e)
-}, true)
+document.addEventListener('dragenter', preventDefault, true)
 document.addEventListener('dragover', preventDefault, true)
 
-document.addEventListener('dragleave', e => {
-  // relatedTarget is null iff the cursor actually left the window. Inner
-  // transitions between elements have a non-null relatedTarget; ignoring
-  // them keeps the iframe inert for the whole drag.
-  if (!e.relatedTarget) setIframeInert(false)
-}, true)
-
 document.addEventListener('drop', e => {
-  setIframeInert(false)
   e.preventDefault()
   if (!activeTabId) return
   const files = e.dataTransfer?.files

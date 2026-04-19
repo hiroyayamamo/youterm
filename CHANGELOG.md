@@ -2,6 +2,18 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.3] — 2026-04-20
+
+### Fixed
+- **overlay モードでも drag-and-drop が効くように(`inputTarget` ベースの iframe inert 化)**
+  - 真因: YouTube iframe は Chromium 上で **OOPIF(out-of-process iframe)**として動作しており、cursor が iframe 領域にある間の drag event は**親ドキュメントに届かず iframe のプロセスへ直接ルーティング**される。親側で `dragenter` を捕まえて `pointer-events: none` を後付けしようとする v0.15.1 の手口では、そもそも最初の event が来ないので発動せず
+  - 対応: `body.mode-overlay.input-terminal #youtube-iframe { pointer-events: none }` を CSS に追加。overlay モード + `inputTarget === 'terminal'` の時点で iframe を完全に inert にしておき、drag event は必ず親の `#terminal-root` に届くようにする
+  - renderer は `state.inputTarget` を見て body に `input-terminal` / `input-youtube` クラスを付与。既存の `toggle-input-target`(`Cmd+\`)で従来どおりトグル可能
+  - 通常運用(overlay + terminal 入力)では drop OK / YouTube 直接クリックは不可 → YouTube 操作したい時は `Cmd+\` で inputTarget=youtube に切替、または `Cmd+K` で play/pause。どの道 play/pause は Cmd+K が一番速い
+  - preload 側の drag-time pointer-events トグル(v0.15.1)は OOPIF ルーティングの都合で無効なので削除
+
+---
+
 ## [0.15.2] — 2026-04-20
 
 ### Fixed
