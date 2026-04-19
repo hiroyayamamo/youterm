@@ -2,6 +2,19 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.14.9] — 2026-04-20
+
+### Changed
+- **DevTools ショートカットを WebContentsView に正しく向ける**
+  - 従来は `role: 'toggleDevTools'` を使っていたため、Cmd+Alt+I で開くのが BrowserWindow のルート webContents(空の index.html)で、肝心の terminal/YouTube 側が見えなかった
+  - Menu を明示 handler に置き換え:
+    - `Cmd+Alt+I` → terminalView.webContents の DevTools を開閉(主に使う方)
+    - `Cmd+Alt+Shift+I` → 親 BrowserWindow のルート webContents 用(滅多に使わないが残す)
+  - どちらも `mode: 'detach'` で別ウィンドウ化 — ターミナルを縮めずに読める
+  - ドラッグ&ドロップなど renderer / preload 側のデバッグ時に必須
+
+---
+
 ## [0.14.8] — 2026-04-20
 
 ### Fixed
