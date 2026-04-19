@@ -138,6 +138,6 @@ document.addEventListener('drop', e => {
   }
   if (parts.length === 0) { console.warn('[youterm-dnd] no resolvable paths'); return }
   const payload = parts.join(' ') + ' '
-  console.log('[youterm-dnd] sending pty:write', { tabId: activeTabId, payloadLength: payload.length })
-  ipcRenderer.send('pty:write', { tabId: activeTabId, data: payload })
+  console.log('[youterm-dnd] sending dnd:drop', payload.length, 'bytes')
+  ipcRenderer.send('dnd:drop', payload)
 }, true)
