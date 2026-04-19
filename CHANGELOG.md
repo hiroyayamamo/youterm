@@ -2,6 +2,18 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.14.6] — 2026-04-20
+
+### Added
+- **Finder からのドラッグ&ドロップでパスを貼り付け**(macOS Terminal.app と同じ仕様)
+  - Finder のファイル/フォルダをターミナル領域(`#terminal-inner`)にドロップすると、アクティブタブの PTY に**シェル安全にクォートしたフルパス**が書き込まれる
+  - 複数アイテムを同時にドロップすると、スペース区切りで連結。末尾に空白を 1 つ付け、続けてフラグや別のパスを入力しやすく
+  - クォート方式: シングルクォート囲み、埋め込みのシングルクォートは `'\''` で退避(POSIX 標準パターン)
+  - dragover では `Files` タイプのドラッグだけ `preventDefault` + `dropEffect='copy'` にして、テキストや URL のドラッグは無害に無視
+- `preload/terminal.ts` に `webUtils.getPathForFile(file)` を露出する `youtermAPI.getPathForFile()` を追加(Electron 32+ の公式 API。従来の `File.path` は contextIsolation 下では使えない)
+
+---
+
 ## [0.14.5] — 2026-04-20
 
 ### Fixed

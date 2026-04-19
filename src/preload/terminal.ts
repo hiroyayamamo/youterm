@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { AppState, Settings, ColorKey, TabsState } from '../shared/types'
 
 type StateHandler = (s: AppState) => void
@@ -92,4 +92,7 @@ contextBridge.exposeInMainWorld('youtermAPI', {
   tabsContextMenu(tabId: string, x: number, y: number) { ipcRenderer.send('tabs:context-menu', { tabId, x, y }) },
 
   terminalRuntimeReady(tabId: string) { ipcRenderer.send('terminal:runtime-ready', tabId) },
+  getPathForFile(file: File): string {
+    try { return webUtils.getPathForFile(file) } catch { return '' }
+  },
 })
