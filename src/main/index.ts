@@ -40,7 +40,7 @@ async function start() {
 
   settingsBridge = attachSettings(bundle.terminalView, settings)
   youtubeBridge = await attachYoutube(bundle.win, bundle.terminalView, settings)
-  installShortcuts(bundle, modeCtrl, settings, tabsBridge.tabsController)
+  installShortcuts(bundle, modeCtrl, settings, tabsBridge.tabsController, youtubeBridge)
 
   app.on('activate', async () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -56,7 +56,7 @@ async function start() {
       })
       settingsBridge = attachSettings(bundle.terminalView, settings!)
       youtubeBridge = await attachYoutube(bundle.win, bundle.terminalView, settings!)
-      installShortcuts(bundle, modeCtrl, settings!, tabsBridge.tabsController)
+      installShortcuts(bundle, modeCtrl, settings!, tabsBridge.tabsController, youtubeBridge)
     }
   })
 }

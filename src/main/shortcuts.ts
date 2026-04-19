@@ -3,6 +3,7 @@ import type { ModeController } from './modeController'
 import type { SettingsController } from './settingsController'
 import type { TabsController } from './tabsController'
 import type { WindowBundle } from './window'
+import type { YoutubeBridge } from './ipc'
 
 const STEP = 0.05
 
@@ -11,6 +12,7 @@ export function installShortcuts(
   ctrl: ModeController,
   settings: SettingsController,
   tabs: TabsController,
+  youtube: YoutubeBridge,
 ): void {
   const adjustTransparency = (delta: number) => {
     const current = settings.getSettings().transparency
@@ -139,11 +141,7 @@ export function installShortcuts(
           },
         },
         { type: 'separator' },
-        { label: 'Reload YouTube', accelerator: 'Cmd+R', click: () => {
-          if (!bundle.terminalView.webContents.isDestroyed()) {
-            bundle.terminalView.webContents.send('youtube:reload')
-          }
-        }},
+        { label: 'Reload YouTube', accelerator: 'Cmd+R', click: () => { void youtube.reloadAdBlockAndIframe() } },
         { label: 'Hard Reload', accelerator: 'Cmd+Shift+R', click: () => bundle.terminalView.webContents.reloadIgnoringCache() },
         { type: 'separator' },
         { role: 'toggleDevTools' },
