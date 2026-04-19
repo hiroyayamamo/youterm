@@ -61,13 +61,12 @@ async function init(): Promise<void> {
     document.body.classList.toggle('video-fill', initialSettings.videoFillMode)
   }
 
-  // Always open YouTube homepage on launch (v0.12.2: saved URL restore
-  // commented out due to SPA navigation issues from CDP intercept).
-  // To re-enable, swap the commented lines.
+  // Restore saved YouTube URL on launch (fallback to homepage if not set).
+  // Root cause of earlier navigation issue was the /next CDP Fetch intercept,
+  // removed in v0.12.2; URL restore is safe again.
   {
     const iframe = document.getElementById('youtube-iframe') as HTMLIFrameElement | null
-    // const targetUrl = initialSettings?.youtubeLastUrl ?? 'https://www.youtube.com/'
-    const targetUrl = 'https://www.youtube.com/'
+    const targetUrl = initialSettings?.youtubeLastUrl ?? 'https://www.youtube.com/'
     if (iframe && iframe.src !== targetUrl) {
       iframe.src = targetUrl
     }
