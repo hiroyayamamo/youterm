@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.13.2] — 2026-04-19
+
+### Fixed
+- **v0.13.1 で YouTube 画面が真っ暗になる regression を修正**
+  - 原因: v0.13.1 の `handleFetchRequestPaused` に追加した `try/finally` safeguard が想定外の副作用を起こし、一部レスポンスが正常に完了しなくなっていた(fulfillRequest が進行中に finally が別の continueResponse を呼び得る等のレースの可能性)
+  - 対応: v0.13.0 のシンプルな try/catch 構造に戻す。ただし v0.13.1 で追加した **3 秒タイムアウト**(`Promise.race` で `getResponseBody` をタイムアウトさせる)は**維持** — フリーズ防止の主要防衛線
+  - v0.13.1 で追加した **Cmd+R による広告ブロック完全再セットアップ**(`YoutubeBridge.reloadAdBlockAndIframe()`)も**維持** — 万一の復旧手段として有効
+
+---
+
 ## [0.13.1] — 2026-04-19
 
 ### Fixed

@@ -737,42 +737,30 @@ html.youterm-video-fill video.video-stream {
     const dbg = terminalView.webContents.debugger
     const reqId = params.requestId as string
     const responseStatusCode = params.responseStatusCode as number | undefined
-    let resolved = false
 
-    const safeContinue = async () => {
-      if (resolved) return
-      resolved = true
-      try {
-        await dbg.sendCommand('Fetch.continueResponse', { requestId: reqId })
-      } catch {}
+    if (!responseStatusCode) {
+      // Request stage (shouldn't happen since we set requestStage: 'Response', but be safe)
+      try { await dbg.sendCommand('Fetch.continueRequest', { requestId: reqId }) } catch {}
+      return
     }
 
     try {
-      if (!responseStatusCode) {
-        try { await dbg.sendCommand('Fetch.continueRequest', { requestId: reqId }); resolved = true } catch {}
-        return
-      }
-
-      // Timeout the body read to avoid hangs
+      // 3-second timeout on body read to avoid network hangs blocking the request forever
       const TIMEOUT_MS = 3000
       const bodyPromise = dbg.sendCommand('Fetch.getResponseBody', { requestId: reqId })
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('getResponseBody timeout')), TIMEOUT_MS),
       )
-      let bodyResult: { body: string; base64Encoded: boolean }
-      try {
-        bodyResult = (await Promise.race([bodyPromise, timeoutPromise])) as { body: string; base64Encoded: boolean }
-      } catch {
-        await safeContinue()
-        return
+      const bodyResult = (await Promise.race([bodyPromise, timeoutPromise])) as {
+        body: string
+        base64Encoded: boolean
       }
-
       const raw = bodyResult.base64Encoded
         ? Buffer.from(bodyResult.body, 'base64').toString('utf-8')
         : bodyResult.body
       const modified = stripAdsFromBody(raw)
       if (!modified) {
-        await safeContinue()
+        await dbg.sendCommand('Fetch.continueResponse', { requestId: reqId })
         return
       }
       const modifiedBase64 = Buffer.from(modified, 'utf-8').toString('base64')
@@ -783,22 +771,14 @@ html.youterm-video-fill video.video-stream {
           return n !== 'content-length' && n !== 'content-encoding'
         })
         .concat([{ name: 'Content-Length', value: String(Buffer.byteLength(modified)) }])
-      try {
-        await dbg.sendCommand('Fetch.fulfillRequest', {
-          requestId: reqId,
-          responseCode: responseStatusCode,
-          responseHeaders: newHeaders,
-          body: modifiedBase64,
-        })
-        resolved = true
-      } catch {
-        await safeContinue()
-      }
-    } finally {
-      // Last-resort safeguard: if nothing resolved this request, pass it through
-      if (!resolved) {
-        try { await dbg.sendCommand('Fetch.continueResponse', { requestId: reqId }) } catch {}
-      }
+      await dbg.sendCommand('Fetch.fulfillRequest', {
+        requestId: reqId,
+        responseCode: responseStatusCode,
+        responseHeaders: newHeaders,
+        body: modifiedBase64,
+      })
+    } catch {
+      try { await dbg.sendCommand('Fetch.continueResponse', { requestId: reqId }) } catch {}
     }
   }
 
