@@ -51,6 +51,14 @@ html, body {
   background-color: transparent !important;
 }
 
+/* Bold text accent: Cyberpunk cyan for any bold cell, overriding xterm's
+   default behavior of keeping default-foreground bold at the normal
+   foreground color. `drawBoldTextInBrightColors` alone only remaps ANSI
+   colors; this rule covers the uncolored bold (prompts, headings, etc.). */
+.xterm .xterm-bold {
+  color: rgb(0, 221, 255) !important;
+}
+
 *::-webkit-scrollbar:horizontal {
   display: none;
   height: 0;
