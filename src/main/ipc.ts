@@ -365,6 +365,7 @@ function isYoutubeHomeUrl(url: string): boolean {
 export interface YoutubeBridge {
   dispose(): void
   flushPlayback(): Promise<void>
+  reloadAdBlockAndIframe(): Promise<void>
 }
 
 export async function attachYoutube(
@@ -736,24 +737,45 @@ html.youterm-video-fill video.video-stream {
     const dbg = terminalView.webContents.debugger
     const reqId = params.requestId as string
     const responseStatusCode = params.responseStatusCode as number | undefined
-    if (!responseStatusCode) {
-      // Request stage (shouldn't happen since we set requestStage: 'Response', but be safe)
-      try { await dbg.sendCommand('Fetch.continueRequest', { requestId: reqId }) } catch {}
-      return
+    let resolved = false
+
+    const safeContinue = async () => {
+      if (resolved) return
+      resolved = true
+      try {
+        await dbg.sendCommand('Fetch.continueResponse', { requestId: reqId })
+      } catch {}
     }
+
     try {
-      const bodyResult = await dbg.sendCommand('Fetch.getResponseBody', { requestId: reqId }) as { body: string; base64Encoded: boolean }
+      if (!responseStatusCode) {
+        try { await dbg.sendCommand('Fetch.continueRequest', { requestId: reqId }); resolved = true } catch {}
+        return
+      }
+
+      // Timeout the body read to avoid hangs
+      const TIMEOUT_MS = 3000
+      const bodyPromise = dbg.sendCommand('Fetch.getResponseBody', { requestId: reqId })
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('getResponseBody timeout')), TIMEOUT_MS),
+      )
+      let bodyResult: { body: string; base64Encoded: boolean }
+      try {
+        bodyResult = (await Promise.race([bodyPromise, timeoutPromise])) as { body: string; base64Encoded: boolean }
+      } catch {
+        await safeContinue()
+        return
+      }
+
       const raw = bodyResult.base64Encoded
         ? Buffer.from(bodyResult.body, 'base64').toString('utf-8')
         : bodyResult.body
       const modified = stripAdsFromBody(raw)
       if (!modified) {
-        // No ad fields found; pass through unmodified
-        await dbg.sendCommand('Fetch.continueResponse', { requestId: reqId })
+        await safeContinue()
         return
       }
       const modifiedBase64 = Buffer.from(modified, 'utf-8').toString('base64')
-      // Rebuild headers, drop Content-Length and Content-Encoding (body is unencoded now)
       const origHeaders = (params.responseHeaders as Array<{ name: string; value: string }> | undefined) ?? []
       const newHeaders = origHeaders
         .filter(h => {
@@ -761,14 +783,22 @@ html.youterm-video-fill video.video-stream {
           return n !== 'content-length' && n !== 'content-encoding'
         })
         .concat([{ name: 'Content-Length', value: String(Buffer.byteLength(modified)) }])
-      await dbg.sendCommand('Fetch.fulfillRequest', {
-        requestId: reqId,
-        responseCode: responseStatusCode,
-        responseHeaders: newHeaders,
-        body: modifiedBase64,
-      })
-    } catch {
-      try { await dbg.sendCommand('Fetch.continueResponse', { requestId: reqId }) } catch {}
+      try {
+        await dbg.sendCommand('Fetch.fulfillRequest', {
+          requestId: reqId,
+          responseCode: responseStatusCode,
+          responseHeaders: newHeaders,
+          body: modifiedBase64,
+        })
+        resolved = true
+      } catch {
+        await safeContinue()
+      }
+    } finally {
+      // Last-resort safeguard: if nothing resolved this request, pass it through
+      if (!resolved) {
+        try { await dbg.sendCommand('Fetch.continueResponse', { requestId: reqId }) } catch {}
+      }
     }
   }
 
@@ -983,6 +1013,21 @@ html.youterm-video-fill video.video-stream {
 
   return {
     flushPlayback: pollPlayback,
+    async reloadAdBlockAndIframe() {
+      try {
+        if (settings.getSettings().adBlockEnabled) {
+          await uninstallFetchIntercept()
+          await uninstallAdStripViaCDP()
+          await installAdStripViaCDP()
+          await installFetchIntercept()
+        }
+      } catch (err) {
+        console.error('[adBlock] reload cycle failed:', err)
+      }
+      if (!terminalView.webContents.isDestroyed()) {
+        terminalView.webContents.send('youtube:reload')
+      }
+    },
     dispose() {
       disposed = true
       clearInterval(pollInterval)

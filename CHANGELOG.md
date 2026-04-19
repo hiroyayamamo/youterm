@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.13.1] — 2026-04-19
+
+### Fixed
+- **広告ブロックのエラーでアプリが完全フリーズする問題を修正**
+  - 原因: CDP `Fetch.requestPaused` ハンドラが途中で失敗した際に `continueResponse` / `fulfillRequest` が呼ばれず、request が network 層で paused 状態のまま停止 → YouTube ページが response 待ちで固まり、連鎖で main プロセスの IPC も詰まって Cmd+R も Cmd+Q も効かない状態になっていた
+  - 対応1: ハンドラを `try/finally` で完全防御 + `getResponseBody` に 3 秒タイムアウト。何があっても最終的に `continueResponse` を呼び request を解放
+  - 対応2: `Cmd+R`(Reload YouTube)で**広告ブロック CDP を完全再セットアップ**するフローを追加。Fetch.enable uninstall → Script uninstall → Script install → Fetch.enable install → iframe reload。詰まった CDP 状態もクリーンにリカバー可能
+  - 新規: `YoutubeBridge.reloadAdBlockAndIframe()` を露出、shortcuts.ts の Cmd+R がこれを使用
+
+---
+
 ## [0.13.0] — 2026-04-19
 
 ### Added
