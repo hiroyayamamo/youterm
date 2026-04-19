@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.14.3] — 2026-04-20
+
+### Fixed
+- **Cmd+T で開いた新規タブにもスプラッシュ(ロゴ/バージョン/名前)が出るように**
+  - 原因: `tabsController.newTab()` が `spawnFor(id)` を先に呼んでいたため、onSpawn 経由の splash(`pty:data`)が renderer に届いた時点では `tabs:state` がまだ broadcast されておらず、対応する xterm runtime が存在せず → `runtimes.get(id)` が undefined を返して **データが丸ごと破棄**されていた
+  - 対応: `newTab()` 内の順序を入れ替え、まず `apply({type: 'new-tab', id})` で state を更新・broadcast → renderer が `ensureRuntime(id)` で xterm を作成 → そのあとで `spawnFor(id)` が走り splash IPC が届く、という順序に修正
+  - 初回起動時のスプラッシュ(`pendingSplashTabs` + `terminal:ready`)は従来どおり動作
+
+---
+
 ## [0.14.2] — 2026-04-20
 
 ### Changed (bisect release)

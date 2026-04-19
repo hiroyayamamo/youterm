@@ -108,8 +108,11 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
     getState: () => state,
     newTab() {
       const id = String(nextId++)
-      spawnFor(id)
+      // Broadcast state first so the renderer creates the xterm runtime
+      // before the splash (onSpawn → pty:data) arrives; otherwise the data
+      // is dropped by runtimes.get(id) returning undefined.
       apply({ type: 'new-tab', id })
+      spawnFor(id)
     },
     async closeTab(tabId: string): Promise<CloseResult> {
       if (state.tabs.length === 1 && state.tabs[0].id === tabId) {
