@@ -22,7 +22,7 @@ export function createModeController(
   opts: CreateModeControllerOptions = {},
 ): ModeController {
   let state: AppState = opts.initialMode
-    ? { mode: opts.initialMode, inputTarget: opts.initialMode === 'youtube-only' ? 'youtube' : 'terminal' }
+    ? { mode: opts.initialMode }
     : INITIAL_STATE
   const subs = new Set<(s: AppState) => void>()
 

@@ -109,8 +109,6 @@ export function installShortcuts(
         { label: 'YouTube Only', accelerator: 'Cmd+1', click: () => ctrl.dispatch({ type: 'set-mode', mode: 'youtube-only' }) },
         { label: 'Overlay', accelerator: 'Cmd+2', click: () => ctrl.dispatch({ type: 'set-mode', mode: 'overlay' }) },
         { label: 'Terminal Only', accelerator: 'Cmd+3', click: () => ctrl.dispatch({ type: 'set-mode', mode: 'terminal-only' }) },
-        { type: 'separator' },
-        { label: 'Toggle Input Target', accelerator: 'Cmd+\\', click: () => ctrl.dispatch({ type: 'toggle-input-target' }) },
       ],
     },
     {
