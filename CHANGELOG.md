@@ -2,6 +2,21 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.12.2] — 2026-04-19
+
+### Fixed
+- **YouTube iframe 内の SPA ナビゲーションが動かない問題を修正**
+  - 原因: v0.7.3 で `/youtubei/v1/next*` に対して CDP Fetch レスポンスインターセプションを追加していたが、`/next` は YouTube の SPA ナビゲーション(次動画データ、関連動画、ページ遷移)に使われる endpoint で、介入により navigation が壊れていた。さらに `/next` レスポンスに ad field は元々入っていないため intercept する意味もなかった
+  - 対応: CDP Fetch pattern および JS 側 fetch patch の `isPlayerApi` から `/next` を削除、`/player` のみ intercept 対象に
+
+### Changed
+- **起動時に常に YouTube TOP を表示**(保存 URL 復元を一旦無効化)
+  - `src/renderer/terminal/main.ts` の iframe 初期 src 設定を `'https://www.youtube.com/'` 固定にコメントアウト切替
+  - 保存 URL 追跡 (`youtubeLastUrl` の設定、navigation tracking、再生位置永続化等)は引き続き動作 — 使用していないだけ
+  - 保存 URL 復元を再有効化したい場合は renderer main.ts のコメント行を戻すだけ
+
+---
+
 ## [0.12.1] — 2026-04-19
 
 ### Changed

@@ -495,7 +495,6 @@ html.youterm-video-fill video.video-stream {
   const isPlayerApi = (url) => {
     if (typeof url !== 'string') return false
     return url.includes('/youtubei/v1/player') ||
-           url.includes('/youtubei/v1/next') ||
            url.includes('/get_video_info')
   }
 
@@ -781,9 +780,7 @@ html.youterm-video-fill video.video-stream {
       await dbg.sendCommand('Fetch.enable', {
         patterns: [
           { urlPattern: 'https://www.youtube.com/youtubei/v1/player*', requestStage: 'Response' },
-          { urlPattern: 'https://www.youtube.com/youtubei/v1/next*', requestStage: 'Response' },
           { urlPattern: 'https://m.youtube.com/youtubei/v1/player*', requestStage: 'Response' },
-          { urlPattern: 'https://m.youtube.com/youtubei/v1/next*', requestStage: 'Response' },
         ],
       })
       debuggerMessageListener = (_event, method, params) => {
