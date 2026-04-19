@@ -183,6 +183,15 @@ body.mode-terminal-only #youtube-iframe {
   pointer-events: none;
 }
 
+/* Overlay mode + terminal input target: iframe must be inert so that
+   native drag events (and mouse events) fall through to #terminal-root.
+   Without this, Chromium's OOPIF routing sends drags into the cross-origin
+   YouTube frame, which rejects the drop and bounces the file back. User
+   toggles with Cmd+\ to temporarily make the iframe interactive again. */
+body.mode-overlay.input-terminal #youtube-iframe {
+  pointer-events: none;
+}
+
 /* Ensure terminal overlay sits above the iframe */
 #terminal-root {
   z-index: 1;
