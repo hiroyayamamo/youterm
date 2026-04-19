@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.2] — 2026-04-20
+
+### Fixed
+- **タイトルバー/信号機ボタンが消え、ウィンドウの移動・最大化ができなくなっていた regression を修正**
+  - 原因: v0.15.0 で `BrowserWindow` に `transparent: true` を付けた。以前は子の `WebContentsView` 側に付いていたのでウィンドウ自体の chrome は無傷だったが、window そのものに付くと macOS がネイティブのタイトルバーを丸ごと外してしまう
+  - 対応: `transparent: true` を削除。ターミナルの半透明は従来どおり CSS(`#terminal-root` の `rgba()` 背景 + `backdrop-filter`)で実現し、下には不透明な YouTube iframe があるため window 自体を透過させる必要はない
+  - これでタイトルバー表示、ドラッグ移動、緑ボタン最大化、信号機ボタンすべて復活
+
+---
+
 ## [0.15.1] — 2026-04-20
 
 ### Fixed
