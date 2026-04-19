@@ -2,6 +2,19 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.14.5] — 2026-04-20
+
+### Fixed
+- **v0.14.4 で初回タブの splash + shell プロンプトが消えて入力不能になる regression を修正**
+  - 原因: `webContents.on('did-start-loading', …)` で `readyTabs` と `pendingByTab` をクリアしていたが、この event は YouTube iframe が起動時に自前の URL へ遷移するタイミングでも発火する。結果として spawnFor で既に積まれていた **splash + 初期 zsh プロンプトが iframe navigation のたびに全消去** → runtime-ready 受信時の flush は空 → ターミナルに何も出ず、その状態だと xterm が正しく focus を受け取れず入力もできなく見える
+  - 対応: `did-start-loading` リスナーを削除。Cmd+Shift+R の renderer reload ケースは、fresh renderer が `ensureRuntime` 後に改めて `terminal:runtime-ready` を送ってくる。`readyTabs` に既に同 ID があっても `add` は no-op で害なし、そのあとの pty 出力は新しい xterm に直送される
+
+### Required behavior
+- Cmd+T 新規タブ → 必ず splash が表示、splash の下でコマンド入力可能
+- アプリ終了 → 再起動 → 残っていた全タブで splash が表示、コマンド入力可能
+
+---
+
 ## [0.14.4] — 2026-04-20
 
 ### Fixed

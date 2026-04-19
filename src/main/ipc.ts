@@ -151,13 +151,12 @@ export async function attachTabs(
   }
   ipcMain.on('terminal:runtime-ready', handleRuntimeReady)
 
-  // Renderer reload (Cmd+Shift+R) discards all runtimes — clear so each tab
-  // re-signals runtime-ready after re-init and we can flush a fresh splash.
-  const onDidStartLoading = () => {
-    readyTabs.clear()
-    pendingByTab.clear()
-  }
-  terminalView.webContents.on('did-start-loading', onDidStartLoading)
+  // NOTE: Don't reset readyTabs on `did-start-loading` — that event also fires
+  // for the YouTube iframe's top-level navigation on startup, which would wipe
+  // out the buffered splash + shell prompt before the renderer could consume
+  // them. Cmd+Shift+R reload is tolerated because the fresh renderer re-sends
+  // runtime-ready; the duplicate add is a no-op and subsequent pty data flows
+  // directly into the newly created xterm.
 
   const tabsController = createTabsController({
     spawnPty: spawnPtyWithPid,
@@ -275,9 +274,6 @@ export async function attachTabs(
       ipcMain.removeListener('tabs:context-menu', onContextMenu)
       ipcMain.removeHandler('tabs:get-initial')
       ipcMain.removeListener('terminal:runtime-ready', handleRuntimeReady)
-      if (!terminalView.webContents.isDestroyed()) {
-        terminalView.webContents.removeListener('did-start-loading', onDidStartLoading)
-      }
       tabsController.disposeAll()
     },
   }
