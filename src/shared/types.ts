@@ -13,6 +13,7 @@ export const INITIAL_STATE: AppState = {
 
 export interface YoutermAPI {
   onStateChanged(cb: (state: AppState) => void): () => boolean
+  stateGetInitial(): Promise<AppState>
   onPtyData(cb: (payload: { tabId: string; data: string }) => void): () => boolean
   ptyWrite(tabId: string, data: string): void
   ptyResize(tabId: string, size: { cols: number; rows: number }): void

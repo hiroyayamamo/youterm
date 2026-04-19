@@ -184,6 +184,14 @@ async function init(): Promise<void> {
     document.body.classList.add(`mode-${mode}`)
   }
 
+  // Pull initial mode state explicitly (avoid race with push-based state:changed)
+  try {
+    const initialState = await window.youtermAPI.stateGetInitial()
+    applyModeClass(initialState.mode)
+  } catch (err) {
+    console.error('[renderer] failed to load initial state:', err)
+  }
+
   window.youtermAPI.onStateChanged(state => {
     applyModeClass(state.mode)
     const iframe = document.getElementById('youtube-iframe') as HTMLIFrameElement | null
