@@ -2,6 +2,22 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.14.1] — 2026-04-20
+
+### Removed
+- **fetch / XHR モンキーパッチと CDP debugger 利用を完全削除**(3 層防御 → 2 層防御)
+  - 背景: v0.14.0 で CDP Fetch intercept を外した結果、YouTube `/youtubei/v1/player` 応答は生のまま in-page 側の `fetch` wrapper に到達するように。wrapper は `new Response(JSON.stringify(data), { headers: response.headers })` で再構築していたが、元の `Content-Encoding: gzip` ヘッダや不整合な `Content-Length` をそのまま引き継ぐため player が応答を正しく解釈できず**起動時に黒画面**になる regression
+  - 方針転換: 「サーバ応答を client で捏造する」アプローチは fragile すぎるため放棄。`AD_STRIP_SCRIPT` から `window.fetch` / `XMLHttpRequest.prototype.open,send` の wrap を全削除
+  - あわせて CDP `Page.addScriptToEvaluateOnNewDocument` による document-start 注入(`installAdStripViaCDP` / `uninstallAdStripViaCDP`)も削除 — 残された DOM スキップ/初回 pause 処理は `did-frame-finish-load` 経由の注入で十分足りる
+  - `terminalView.webContents.debugger` の attach/detach も一切なくなり、CDP 依存ゼロに
+  - Cmd+R(Reload YouTube)は iframe リロード送信のみに簡略化
+- 現時点の広告ブロック構成(**2 層**):
+  1. `@ghostery/adblocker-electron` による network filter(別プロセス、安全)
+  2. DOM 監視 + `#movie_player.ad-showing` 検知 → skip ボタンクリック / 末尾シーク(既存)
+- トレードオフ: response 書き換えがなくなったため「再生開始直後の 1〜数秒、広告ストリームが差し込まれる」可能性は残る。ただし DOM スキップで即座に飛ばせるので実運用では体感差は小さい。反面、CDP 由来のフリーズ・黒画面を完全に排除
+
+---
+
 ## [0.14.0] — 2026-04-20
 
 ### Removed
