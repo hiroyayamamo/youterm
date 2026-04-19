@@ -255,39 +255,6 @@ async function init(): Promise<void> {
     console.error('[renderer] failed to load initial tabs:', err)
   }
 
-  // Drag & drop Finder items: write shell-quoted paths into the active tab's
-  // pty, matching macOS Terminal.app behavior. Single-quote wrap with embedded
-  // single quotes escaped as '\''. Paths are separated by spaces and followed
-  // by a trailing space so the caret sits after the last path ready for a flag.
-  //
-  // Handlers are attached to the whole document in the capture phase so we
-  // ALWAYS preventDefault first — Chromium otherwise navigates the renderer to
-  // the dropped `file://` URL and drops are silently swallowed by xterm before
-  // a bubble-phase handler on #terminal-inner could see them.
-  const shellQuote = (p: string): string => `'${p.replace(/'/g, "'\\''")}'`
-
-  const onDragEnterOrOver = (e: DragEvent) => {
-    if (!e.dataTransfer) return
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'copy'
-  }
-  document.addEventListener('dragenter', onDragEnterOrOver, true)
-  document.addEventListener('dragover', onDragEnterOrOver, true)
-
-  document.addEventListener('drop', e => {
-    e.preventDefault()
-    if (!tabsState) return
-    const files = e.dataTransfer?.files
-    if (!files || files.length === 0) return
-    const parts: string[] = []
-    for (const file of Array.from(files)) {
-      const p = window.youtermAPI.getPathForFile(file)
-      if (p) parts.push(shellQuote(p))
-    }
-    if (parts.length === 0) return
-    window.youtermAPI.ptyWrite(tabsState.activeId, parts.join(' ') + ' ')
-  }, true)
-
   const observer = new ResizeObserver(() => {
     if (!tabsState) return
     const r = runtimes.get(tabsState.activeId)

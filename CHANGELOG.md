@@ -2,6 +2,18 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.14.8] — 2026-04-20
+
+### Fixed
+- **ドラッグ&ドロップが依然として効かず、ファイルが元の位置に戻る問題を修正**
+  - 症状: Finder からファイルをドラッグしてアプリ上でドロップしても、macOS が「受付先無し」と判定してアニメーションで元の位置に戻される(= dragover で `preventDefault` が一度も走っていない状態)
+  - 原因: ハンドラを renderer の async な `init()` 内で登録していた。preload ではなく renderer main.ts に書いていたため、`settingsGetInitial` などの await チェーンの後で `document.addEventListener` が走る。DOM イベントを受ける前に init() が完了していれば大丈夫だが、init()の完了タイミングとユーザーの初回ドロップがぶつかるとハンドラが未登録の状態で Chromium のデフォルト(rejected)が勝ってしまう。加えて、WebContentsView を使っていると event routing によっては root BrowserWindow 側に drop が漏れる可能性もある
+  - 対応1: drag-and-drop のハンドラ一式を **preload に移動**。preload は `document_start` 段階で走るので DOM への `addEventListener` が renderer の JS 実行より確実に早い
+  - 対応2: preload 内で **`tabs:state` IPC を直接購読**して `activeTabId` を保持 → drop 時に contextBridge を経由せず直接 `ipcRenderer.send('pty:write', ...)` で書き込み。`File` オブジェクトも preload 内で `webUtils.getPathForFile` に渡すのでブリッジ跨ぎの懸念がゼロ
+  - 対応3: 安全網として main 側で `win.webContents` と `terminalView.webContents` の両方に `will-navigate` リスナを追加し、`file://` への navigation を `preventDefault`。万一ドロップが preload の capture を抜けても、誤って page が差し替わることは無い
+
+---
+
 ## [0.14.7] — 2026-04-20
 
 ### Fixed

@@ -35,7 +35,6 @@ export interface YoutermAPI {
   tabsRename(tabId: string, name: string | null): void
   tabsContextMenu(tabId: string, x: number, y: number): void
   terminalRuntimeReady(tabId: string): void
-  getPathForFile(file: File): string
 }
 
 export type ColorKey = 'black' | 'dark-gray' | 'dark-blue' | 'dark-green'

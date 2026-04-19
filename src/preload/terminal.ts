@@ -31,7 +31,9 @@ ipcRenderer.on('panel:toggle', () => {
 ipcRenderer.on('youtube:reload', () => {
   for (const h of youtubeReloadHandlers) h()
 })
+let activeTabId: string | null = null
 ipcRenderer.on('tabs:state', (_e, s: TabsState) => {
+  activeTabId = s.activeId
   for (const h of tabsStateHandlers) h(s)
 })
 ipcRenderer.on('tabs:start-rename', (_e, tabId: string) => {
@@ -92,7 +94,35 @@ contextBridge.exposeInMainWorld('youtermAPI', {
   tabsContextMenu(tabId: string, x: number, y: number) { ipcRenderer.send('tabs:context-menu', { tabId, x, y }) },
 
   terminalRuntimeReady(tabId: string) { ipcRenderer.send('terminal:runtime-ready', tabId) },
-  getPathForFile(file: File): string {
-    try { return webUtils.getPathForFile(file) } catch { return '' }
-  },
 })
+
+// Finder drag-and-drop handling is attached DIRECTLY in the preload so it
+// registers at document_start, before the renderer's async init() runs. If
+// these listeners are installed late, macOS sees "no drop target accepted"
+// and animates the file back to its origin — which is exactly the symptom we
+// were hitting while the handlers lived in the renderer's init path.
+const shellQuote = (p: string): string => `'${p.replace(/'/g, "'\\''")}'`
+
+const preventDefault = (e: DragEvent) => {
+  if (!e.dataTransfer) return
+  e.preventDefault()
+  e.dataTransfer.dropEffect = 'copy'
+}
+document.addEventListener('dragenter', preventDefault, true)
+document.addEventListener('dragover', preventDefault, true)
+
+document.addEventListener('drop', e => {
+  e.preventDefault()
+  if (!activeTabId) return
+  const files = e.dataTransfer?.files
+  if (!files || files.length === 0) return
+  const parts: string[] = []
+  for (const file of Array.from(files)) {
+    try {
+      const p = webUtils.getPathForFile(file)
+      if (p) parts.push(shellQuote(p))
+    } catch {}
+  }
+  if (parts.length === 0) return
+  ipcRenderer.send('pty:write', { tabId: activeTabId, data: parts.join(' ') + ' ' })
+}, true)
