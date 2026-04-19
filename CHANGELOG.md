@@ -2,6 +2,19 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.4] — 2026-04-20
+
+### Removed
+- **`inputTarget` 概念と `Cmd+\` (Toggle Input Target) ショートカットを削除**
+  - 実運用でほぼ使われないことが判明。YouTube を操作したい時は `Cmd+1`(YouTube Only)で済む
+  - `AppState.inputTarget` / `InputTarget` 型 / `toggle-input-target` action / 関連メニュー項目・テストを全削除
+  - renderer の body class 処理(`input-terminal` / `input-youtube`)も削除
+  - overlay モードの iframe inert は CSS `body.mode-overlay #youtube-iframe { pointer-events: none }` に簡略化。以前は `inputTarget === 'terminal'` でガードしていたが、現在 overlay なら常に inert
+  - tests: 113(toggle-input-target の 4 テストを削除、ほかは合計維持)
+  - 結果: アーキテクチャがシンプルに、overlay モードでの drag-drop は引き続き動作
+
+---
+
 ## [0.15.3] — 2026-04-20
 
 ### Fixed
