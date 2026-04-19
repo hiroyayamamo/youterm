@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { createMainWindow } from './window'
 import { attachTabs, attachSettings, attachYoutube, type TabsBridge, type SettingsBridge, type YoutubeBridge } from './ipc'
 import { createModeController, type ModeController } from './modeController'
@@ -27,6 +27,11 @@ async function start() {
 
   modeCtrl = createModeController(bundle, { initialMode: settings.getSettings().lastMode })
 
+  // Register one-time (idempotent) handler for renderer to pull initial state.
+  // Closure reads via module-level `modeCtrl` so the latest instance is always used.
+  ipcMain.removeHandler('state:get-initial')
+  ipcMain.handle('state:get-initial', () => modeCtrl!.getState())
+
   modeCtrl.subscribe(state => {
     if (state.mode !== settings!.getSettings().lastMode) {
       settings!.dispatch({ type: 'set-last-mode', mode: state.mode })
@@ -42,6 +47,8 @@ async function start() {
       bundle = createMainWindow()
       tabsBridge = await attachTabs(bundle.win, bundle.terminalView)
       modeCtrl = createModeController(bundle, { initialMode: settings!.getSettings().lastMode })
+      ipcMain.removeHandler('state:get-initial')
+      ipcMain.handle('state:get-initial', () => modeCtrl!.getState())
       modeCtrl.subscribe(state => {
         if (state.mode !== settings!.getSettings().lastMode) {
           settings!.dispatch({ type: 'set-last-mode', mode: state.mode })

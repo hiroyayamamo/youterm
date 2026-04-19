@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld('youtermAPI', {
     stateHandlers.add(cb)
     return () => stateHandlers.delete(cb)
   },
+  stateGetInitial(): Promise<AppState> { return ipcRenderer.invoke('state:get-initial') },
   onPtyData(cb: PtyDataHandler) {
     ptyDataHandlers.add(cb)
     return () => ptyDataHandlers.delete(cb)

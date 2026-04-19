@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.12.4] — 2026-04-19
+
+### Fixed
+- **起動直後に `Cmd+1` を押しても YouTube モードに切り替わらない bug を修正**
+  - 原因: `settings.lastMode === 'youtube-only'` のケースで modeController が youtube-only で初期化され、`setTimeout(broadcast, 0)` で `state:changed` 送信するが、renderer の init() async 完了前で `onStateChanged` ハンドラ未登録 → メッセージ喪失 → renderer の body クラス未設定 → CSS 未適用でビジュアル上 overlay のまま
+  - ユーザーが Cmd+1 押しても reducer が「既に youtube-only」と判定して no-op → broadcast 無し → renderer 同じ状態
+  - Cmd+2 押すと状態変化で broadcast 発火、その後は正常
+  - 対応: `state:get-initial` invoke handler を追加し、renderer init() で `settings:get-initial` / `tabs:get-initial` と同じパターンで明示 pull。push 依存を解消
+
+---
+
 ## [0.12.3] — 2026-04-19
 
 ### Changed
