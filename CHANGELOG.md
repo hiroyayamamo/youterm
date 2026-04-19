@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.1] — 2026-04-20
+
+### Fixed
+- **overlay モード(Cmd+2)でもドラッグ&ドロップが効くように**
+  - 症状: terminal-only モード(Cmd+3)では drop 成功、overlay モードだと file が Finder に戻る
+  - 原因: overlay モードでは YouTube iframe が `pointer-events: auto`(default)のまま。Chromium の drag hit-testing は「cross-origin iframe の領域内に cursor が入ると、上に重なっている div よりも iframe 自体を drop ターゲットに選ぶ」挙動があるため、terminal-root に向かうはずのドロップが iframe に奪われていた。iframe 側は file drop を受け付けないので OS が reject → バウンス
+  - 対応: preload の drag 開始タイミング(`dragenter`)で iframe に `pointer-events: none` を一時付与、drop 時と cursor がウィンドウ外に出たとき(`dragleave` の `relatedTarget === null`)に解除。通常の再生/一時停止クリックには影響しない
+  - 併せて診断ログ(`[youterm-dnd]`)は削除(実装が安定したため)
+
+---
+
 ## [0.15.0] — 2026-04-20
 
 ### Changed (architecture flatten)
