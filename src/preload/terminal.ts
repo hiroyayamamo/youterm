@@ -96,48 +96,57 @@ contextBridge.exposeInMainWorld('youtermAPI', {
   terminalRuntimeReady(tabId: string) { ipcRenderer.send('terminal:runtime-ready', tabId) },
 })
 
-// Finder drag-and-drop handling is attached DIRECTLY in the preload so it
+// Finder drag-and-drop handling is attached directly in the preload so it
 // registers at document_start, before the renderer's async init() runs.
-// Diagnostic logs are intentionally verbose here — remove once the path is
-// proven. Look for `[youterm-dnd]` in DevTools Console (top frame).
-console.log('[youterm-dnd] preload loaded, webUtils type:', typeof webUtils, 'getPathForFile type:', typeof webUtils?.getPathForFile)
-
+//
+// In overlay mode the YouTube iframe sits below a semi-transparent
+// #terminal-root. Chromium's drag hit-testing picks the iframe — not the
+// stacked-higher terminal-root — whenever the iframe has default
+// pointer-events, because cross-origin iframes claim drops directly even
+// when a sibling with higher z-index visually overlaps. The fix is to
+// temporarily set `pointer-events: none` on the iframe while a drag is in
+// progress, then restore it on drop or when the cursor leaves the window.
+// Regular clicks on YouTube (play/pause, seek) are untouched.
 const shellQuote = (p: string): string => `'${p.replace(/'/g, "'\\''")}'`
 
-let dragoverLogged = false
+const iframeEl = () => document.getElementById('youtube-iframe') as HTMLIFrameElement | null
+const setIframeInert = (inert: boolean) => {
+  const f = iframeEl()
+  if (f) f.style.pointerEvents = inert ? 'none' : ''
+}
+
 const preventDefault = (e: DragEvent) => {
-  if (!dragoverLogged) {
-    dragoverLogged = true
-    console.log('[youterm-dnd] first dragover, types:', e.dataTransfer && Array.from(e.dataTransfer.types))
-  }
   if (!e.dataTransfer) return
   e.preventDefault()
   e.dataTransfer.dropEffect = 'copy'
 }
+
 document.addEventListener('dragenter', e => {
-  console.log('[youterm-dnd] dragenter, types:', e.dataTransfer && Array.from(e.dataTransfer.types))
+  setIframeInert(true)
   preventDefault(e)
 }, true)
 document.addEventListener('dragover', preventDefault, true)
 
+document.addEventListener('dragleave', e => {
+  // relatedTarget is null iff the cursor actually left the window. Inner
+  // transitions between elements have a non-null relatedTarget; ignoring
+  // them keeps the iframe inert for the whole drag.
+  if (!e.relatedTarget) setIframeInert(false)
+}, true)
+
 document.addEventListener('drop', e => {
-  console.log('[youterm-dnd] drop fired, files:', e.dataTransfer?.files.length, 'activeTabId:', activeTabId)
+  setIframeInert(false)
   e.preventDefault()
-  if (!activeTabId) { console.warn('[youterm-dnd] no active tab, aborting'); return }
+  if (!activeTabId) return
   const files = e.dataTransfer?.files
-  if (!files || files.length === 0) { console.warn('[youterm-dnd] no files on drop'); return }
+  if (!files || files.length === 0) return
   const parts: string[] = []
   for (const file of Array.from(files)) {
     try {
       const p = webUtils.getPathForFile(file)
-      console.log('[youterm-dnd] resolved path:', p, 'for file:', file.name)
       if (p) parts.push(shellQuote(p))
-    } catch (err) {
-      console.error('[youterm-dnd] getPathForFile threw:', err)
-    }
+    } catch {}
   }
-  if (parts.length === 0) { console.warn('[youterm-dnd] no resolvable paths'); return }
-  const payload = parts.join(' ') + ' '
-  console.log('[youterm-dnd] sending dnd:drop', payload.length, 'bytes')
-  ipcRenderer.send('dnd:drop', payload)
+  if (parts.length === 0) return
+  ipcRenderer.send('dnd:drop', parts.join(' ') + ' ')
 }, true)
