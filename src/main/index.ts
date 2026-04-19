@@ -20,7 +20,7 @@ let settings: SettingsController | undefined
 
 async function start() {
   bundle = createMainWindow()
-  tabsBridge = await attachTabs(bundle.win, bundle.terminalView)
+  tabsBridge = await attachTabs(bundle.win, bundle.win.webContents)
 
   const store = await createRealSettingsStore()
   settings = createSettingsController({ store })
@@ -38,14 +38,14 @@ async function start() {
     }
   })
 
-  settingsBridge = attachSettings(bundle.terminalView, settings)
-  youtubeBridge = await attachYoutube(bundle.win, bundle.terminalView, settings)
+  settingsBridge = attachSettings(bundle.win.webContents, settings)
+  youtubeBridge = await attachYoutube(bundle.win, bundle.win.webContents, settings)
   installShortcuts(bundle, modeCtrl, settings, tabsBridge.tabsController, youtubeBridge)
 
   app.on('activate', async () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       bundle = createMainWindow()
-      tabsBridge = await attachTabs(bundle.win, bundle.terminalView)
+      tabsBridge = await attachTabs(bundle.win, bundle.win.webContents)
       modeCtrl = createModeController(bundle, { initialMode: settings!.getSettings().lastMode })
       ipcMain.removeHandler('state:get-initial')
       ipcMain.handle('state:get-initial', () => modeCtrl!.getState())
@@ -54,8 +54,8 @@ async function start() {
           settings!.dispatch({ type: 'set-last-mode', mode: state.mode })
         }
       })
-      settingsBridge = attachSettings(bundle.terminalView, settings!)
-      youtubeBridge = await attachYoutube(bundle.win, bundle.terminalView, settings!)
+      settingsBridge = attachSettings(bundle.win.webContents, settings!)
+      youtubeBridge = await attachYoutube(bundle.win, bundle.win.webContents, settings!)
       installShortcuts(bundle, modeCtrl, settings!, tabsBridge.tabsController, youtubeBridge)
     }
   })

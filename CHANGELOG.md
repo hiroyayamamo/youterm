@@ -2,6 +2,28 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.0] — 2026-04-20
+
+### Changed (architecture flatten)
+- **WebContentsView を廃止、terminal/index.html を BrowserWindow 直ロードに変更**
+  - 背景: v0.14.6 以降 Finder からのドラッグ&ドロップを何度か実装試行したが、Electron 32 + macOS 上で `WebContentsView` の webContents に drag event が一切届かない挙動を確認(preload の初期化ログすら出ない)。v0.14.11 で root BrowserWindow にも preload を付けて両面対応したが依然として発火せず、routing が不確実
+  - 対応: `WebContentsView` を完全に撤廃し、`BrowserWindow.webContents` に直接 `terminal/index.html` をロード。これで drag event の送信先が 1 つに固定され、preload も 1 つで完結
+  - `WindowBundle` から `terminalView` を削除、全ての呼び出し元(`attachTabs` / `attachSettings` / `attachYoutube` / `modeController` / `shortcuts`)の引数を `WebContents` / `BrowserWindow.webContents` に変更
+  - ルート `index.html`(空のシェル)と `src/preload/root.ts`(v0.14.11 で追加)は用途無しのため削除
+  - `persist:terminal` セッション、`X-Frame-Options` / `frame-ancestors` 剥がし、`transparent: true`、preload(terminal.ts)、`contextIsolation` などの設定は BrowserWindow 側に移行
+
+### Fixed
+- **Finder からの drag-and-drop が動作するように**
+  - flat architecture により drag event が確実に `win.webContents` に届く → terminal preload の `[youterm-dnd]` ログが DevTools Console(`Cmd+Alt+I`)で確認可能
+  - drop payload は新 IPC `dnd:drop` で main へ、`tabsController.getState().activeId` の PTY へ書き込み
+  - 複数ファイル同時ドロップはスペース区切りでシェルクォート、末尾空白付き
+
+### Notes
+- v0.14.x シリーズの DnD 試行錯誤(v0.14.6–v0.14.11)と DevTools ルーティング修正(v0.14.9)はこの flat 化で最終解消
+- 診断ログ(`[youterm-dnd]`)はユーザー確認が取れ次第、次リリースで削除予定
+
+---
+
 ## [0.14.11] — 2026-04-20
 
 ### Fixed
