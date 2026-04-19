@@ -60,12 +60,16 @@ export function createMainWindow(): WindowBundle {
   // on Electron 32 + macOS, native drops hit the BrowserWindow's webContents,
   // and a child WebContentsView did not see them — flattening the hierarchy
   // removes the routing ambiguity entirely.
+  // NOTE: no `transparent: true` on the BrowserWindow itself — on macOS that
+  // strips the titlebar and native window chrome (move / maximize / traffic
+  // lights). The terminal's semi-transparency is achieved with CSS
+  // (`rgba()` background + `backdrop-filter`) over the opaque YouTube iframe
+  // underneath, so window-level transparency is not needed.
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
     show: false,
     backgroundColor: '#000000',
-    transparent: true,
     webPreferences: {
       session: terminalSession,
       preload: join(__dirname, '../preload/terminal.js'),
