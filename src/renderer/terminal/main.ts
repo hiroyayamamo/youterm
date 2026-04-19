@@ -61,10 +61,13 @@ async function init(): Promise<void> {
     document.body.classList.toggle('video-fill', initialSettings.videoFillMode)
   }
 
-  // Set iframe initial src from persisted URL (or homepage if none)
+  // Always open YouTube homepage on launch (v0.12.2: saved URL restore
+  // commented out due to SPA navigation issues from CDP intercept).
+  // To re-enable, swap the commented lines.
   {
     const iframe = document.getElementById('youtube-iframe') as HTMLIFrameElement | null
-    const targetUrl = initialSettings?.youtubeLastUrl ?? 'https://www.youtube.com/'
+    // const targetUrl = initialSettings?.youtubeLastUrl ?? 'https://www.youtube.com/'
+    const targetUrl = 'https://www.youtube.com/'
     if (iframe && iframe.src !== targetUrl) {
       iframe.src = targetUrl
     }
