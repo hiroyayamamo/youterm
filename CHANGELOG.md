@@ -2,6 +2,28 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.14.0] — 2026-04-20
+
+### Removed
+- **CDP `Fetch.enable` レスポンスインターセプト層を削除**(4 層防御 → 3 層防御)
+  - 背景: CDP Fetch intercept は network 層で YouTube の `/youtubei/v1/player*` レスポンスを介入する強力な層だったが、ハンドラが何らかの理由で continueResponse / fulfillRequest を呼び損ねると **request が network 層で paused 状態のまま停止** → YouTube が response 待ちでフリーズ → 連鎖で main プロセスの IPC も詰まり、Cmd+R も Cmd+Q も OS 強制終了しか手段がなくなる致命的状態に
+  - さらに **saved URL が freeze トリガの動画だと、再起動 → URL 復元 → 即フリーズの無限ループ**になり、`settings.json` を手動削除するしか復旧できなかった
+  - 対応: CDP Fetch intercept 層を完全削除(関連: `handleFetchRequestPaused` / `installFetchIntercept` / `uninstallFetchIntercept` / `stripAdsFromBody` 等)。残り 3 層で広告ブロック継続:
+    1. `@ghostery/adblocker-electron` network filter(別プロセスで動作、安全)
+    2. CDP `Page.addScriptToEvaluateOnNewDocument` による fetch/XHR monkey-patch(in-page script)
+    3. `did-frame-finish-load` での同 script 注入(フォールバック)
+    4. DOM 監視 + 広告スキップ(最終防衛)
+  - トレードオフ: CDP Fetch が担っていた「初回ロード時の絶対確実な player API intercept」が script injection に依存する形になり、タイミングによっては最初の数秒ほど広告が見える可能性。ただしフリーズリスクが消えるほうがはるかに価値高い
+  - Cmd+R での広告ブロック再セットアップは引き続き動作(`installAdStripViaCDP` のみ再実行)
+
+### Recovery
+- 以前 CDP Fetch intercept のバグで起動不能に陥った場合、以下のコマンドで `settings.json` を削除すると homepage からクリーン起動できます:
+  ```
+  rm "$HOME/Library/Application Support/youterm/settings.json"
+  ```
+
+---
+
 ## [0.13.2] — 2026-04-19
 
 ### Fixed
