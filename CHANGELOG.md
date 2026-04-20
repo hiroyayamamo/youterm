@@ -2,6 +2,22 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.11] — 2026-04-20
+
+### Fixed
+- **Cmd+1 → Cmd+2 でモード切替した後、ターミナル表示が 1 行数文字の超細切れになっていた bug を修正**
+  - 再現: Claude の出力など長文を表示 → `Cmd+1`(YouTube Only、`#terminal-root` に `display:none`)→ `Cmd+2`(Overlay、再表示)すると、xterm が cols=1〜数文字幅で動作、既存出力も narrow wrap で焼き付けされる
+  - 原因: `display: none` の間でも `termArea` の `ResizeObserver` は発火し、0×0 の寸法で `FitAddon.fit()` が呼ばれ、ptyResize(cols=0) を送信。pty と shell(及び Claude)がこれを受けて極小幅で再描画・再 wrap
+  - 対応: 3 箇所に **「コンテナが可視(`offsetWidth > 0 && offsetHeight > 0`)の時だけ fit + resize する」ガード**を追加
+    - `ResizeObserver` コールバック
+    - `applyActiveVisibility`(タブ切替時の fit)
+    - `ensureRuntime` 内の初回 rAF fit(非アクティブタブや youtube-only モードで新規タブ生成時)
+  - さらに `onStateChanged` で **youtube-only 以外**(Overlay / Terminal-Only)に切り替わった時、次フレームで明示的に refit → レイアウトが落ち着いてから正しい cols/rows を確定
+  - 3 つのパスを共通化するため `refitActive()` ヘルパを導入
+  - 結果: モード切替を何度繰り返してもターミナル幅は崩れない。既存 buffer に残った narrow wrap 済みの行は履歴のまま残るが、新しい出力は正常幅
+
+---
+
 ## [0.15.10] — 2026-04-20
 
 ### Added

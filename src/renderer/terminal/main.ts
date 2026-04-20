@@ -135,6 +135,11 @@ async function init(): Promise<void> {
     term.onData(data => window.youtermAPI.ptyWrite(tabId, data))
 
     requestAnimationFrame(() => {
+      // If this runtime's container isn't laid out yet (non-active tab, or
+      // mode-youtube-only in effect), skip fit to avoid shrinking the pty
+      // to zero cols. The ResizeObserver / mode change handlers will re-fit
+      // the moment it becomes visible.
+      if (container.offsetWidth === 0 || container.offsetHeight === 0) return
       try {
         fit.fit()
         window.youtermAPI.ptyResize(tabId, { cols: term.cols, rows: term.rows })
@@ -156,6 +161,24 @@ async function init(): Promise<void> {
     runtimes.delete(tabId)
   }
 
+  // True only when #terminal-root is actually laid out (i.e., not in the
+  // mode-youtube-only branch where the whole root is display: none). Using
+  // offsetWidth/Height on termArea avoids resizing the pty to ~0 cols while
+  // the terminal is hidden, which would otherwise permanently re-wrap all
+  // already-buffered output to an extreme narrow width.
+  const terminalIsVisible = (): boolean =>
+    termArea.offsetWidth > 0 && termArea.offsetHeight > 0
+
+  const refitActive = () => {
+    if (!tabsState) return
+    const active = runtimes.get(tabsState.activeId)
+    if (!active || !terminalIsVisible()) return
+    try {
+      active.fit.fit()
+      window.youtermAPI.ptyResize(tabsState.activeId, { cols: active.term.cols, rows: active.term.rows })
+    } catch {}
+  }
+
   const applyActiveVisibility = () => {
     if (!tabsState) return
     for (const [tabId, runtime] of runtimes.entries()) {
@@ -164,10 +187,7 @@ async function init(): Promise<void> {
     const active = runtimes.get(tabsState.activeId)
     if (active) {
       active.term.focus()
-      try {
-        active.fit.fit()
-        window.youtermAPI.ptyResize(tabsState.activeId, { cols: active.term.cols, rows: active.term.rows })
-      } catch {}
+      refitActive()
     }
   }
 
@@ -223,6 +243,11 @@ async function init(): Promise<void> {
     } else {
       const active = tabsState && runtimes.get(tabsState.activeId)
       active?.term.focus()
+      // Terminal just became visible again (from youtube-only). Wait one
+      // frame so layout settles, then re-fit so cols/rows reflect the real
+      // container size rather than whatever extreme value the pty got stuck
+      // at while hidden.
+      requestAnimationFrame(() => refitActive())
     }
   })
 
@@ -254,15 +279,7 @@ async function init(): Promise<void> {
     console.error('[renderer] failed to load initial tabs:', err)
   }
 
-  const observer = new ResizeObserver(() => {
-    if (!tabsState) return
-    const r = runtimes.get(tabsState.activeId)
-    if (!r) return
-    try {
-      r.fit.fit()
-      window.youtermAPI.ptyResize(tabsState.activeId, { cols: r.term.cols, rows: r.term.rows })
-    } catch {}
-  })
+  const observer = new ResizeObserver(() => refitActive())
   observer.observe(termArea)
 
 }
