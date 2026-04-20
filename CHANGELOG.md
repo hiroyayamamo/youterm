@@ -2,6 +2,22 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.13] — 2026-04-20
+
+### Changed
+- **起動時スプラッシュに宇宙人マスコット + キラキラ装飾を追加**
+  - 案 A(logo 右横に小さい宇宙人)採用、上下に星の飾り帯を追加
+  - 宇宙人は `( •_• )` の顔 + 胸元の `♦`(CYAN 強調)+ 足元の `(_)   (_)` で 5 行分
+  - 上下の飾り帯: `· . ✦ * ° ·` を並べた sparkle ライン、色は **dim cyan** で logo に視線を奪わない控えめな輝き
+  - logo 行は `padEnd(47)` で固定幅化、宇宙人カラムが各行できれいに揃う
+  - カラーマッピング:
+    - logo: GREEN + BOLD(従来どおり)
+    - 宇宙人本体: GREEN(bold なし、logo より軽い印象)
+    - ♦: CYAN + BOLD(強調)
+    - 星: CYAN + DIM(淡く)
+
+---
+
 ## [0.15.12] — 2026-04-20
 
 ### Changed
