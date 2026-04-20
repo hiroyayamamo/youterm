@@ -2,6 +2,15 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.15] — 2026-04-20
+
+### Changed
+- **タブバーの境界線を見えやすく**
+  - タブ間 separator と tab-bar 下端のライン、両方とも `rgba(255, 255, 255, 0.08)` → `rgba(255, 255, 255, 0.3)` に濃く
+  - 以前はほぼ見えず、複数タブ開いた時の切れ目が判別しづらかった
+
+---
+
 ## [0.15.14] — 2026-04-20
 
 ### Changed
