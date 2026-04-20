@@ -2,6 +2,22 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.29] — 2026-04-21
+
+### Added
+- **README.md(英語メイン + 日本語セクション併記)を作成(#119)**
+  - 先頭に英語のタグライン、機能、ビルド手順、ショートカット表
+  - 末尾に日本語訳セクションを統合(別ファイル分割しない方針 — GitHub 初見で両方同時に届く)
+  - demo gif プレースホルダを README 上部に配置(後で撮影・差し替え)
+- **LICENSE(MIT、Copyright 2026 Hiroya Yamamoto)を追加**
+- **`package.json` にメタ情報を追加**: `description` / `author` / `license` / `homepage` / `repository` / `bugs`
+- **git remote を追加**: `origin = https://github.com/hiroyayamamo/youterm.git`
+- **記録ドキュメント**: `docs/adblock/policy.md`(広告対策の方針)、`_claude/logs/release_checklist.md`(#117-120 のリリースチェックリスト)
+
+### Changed
+
+---
+
 ## [0.15.28] — 2026-04-21
 
 ### Fixed

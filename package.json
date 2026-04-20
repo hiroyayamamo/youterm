@@ -1,9 +1,20 @@
 {
   "name": "youterm",
-  "version": "0.15.28",
+  "version": "0.15.29",
   "private": true,
   "type": "module",
   "main": "./out/main/index.js",
+  "description": "Terminal + YouTube in one window. Electron app for macOS that lets you keep coding while YouTube — music videos, lofi streams, anything — plays in the background.",
+  "author": "Hiroya Yamamoto <hiroyayamamo@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/hiroyayamamo/youterm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hiroyayamamo/youterm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hiroyayamamo/youterm/issues"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
