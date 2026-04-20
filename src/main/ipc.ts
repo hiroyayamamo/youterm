@@ -484,98 +484,18 @@ html.youterm-video-fill video.video-stream {
     } catch {}
   }
 
+  // v0.15.9 diagnostic: DOM-based ad skip has been removed. The previous
+  // skipAdIfPresent interval + MutationObserver + aggressiveClick sequence is
+  // the last ad-related code path running in this app after the full
+  // adblocker-electron removal in v0.15.8, and users still hit a total
+  // main-process freeze on video playback. Strip it out and keep only the
+  // initial-pause helper so we can confirm whether this code is the cause.
+  // Ads will play fully during this test — re-add a safer skip if freeze
+  // disappears.
   const AD_STRIP_SCRIPT = `
 (() => {
   if (window.__youtermAdStripInstalled) return
   window.__youtermAdStripInstalled = true
-
-  // DOM-level ad skip: detect #movie_player.ad-showing and skip via button or fast-forward
-  const aggressiveClick = (el) => {
-    try { el.click() } catch {}
-    try {
-      const r = el.getBoundingClientRect()
-      const cx = r.left + r.width / 2
-      const cy = r.top + r.height / 2
-      const opts = { bubbles: true, cancelable: true, view: window, button: 0, clientX: cx, clientY: cy }
-      el.dispatchEvent(new MouseEvent('pointerdown', opts))
-      el.dispatchEvent(new MouseEvent('mousedown', opts))
-      el.dispatchEvent(new MouseEvent('pointerup', opts))
-      el.dispatchEvent(new MouseEvent('mouseup', opts))
-      el.dispatchEvent(new MouseEvent('click', opts))
-    } catch {}
-  }
-
-  const isVisible = (el) => {
-    if (!el) return false
-    if (el.offsetParent === null) return false
-    const s = getComputedStyle(el)
-    return s.visibility !== 'hidden' && s.display !== 'none' && parseFloat(s.opacity) > 0
-  }
-
-  const findExplicitSkipButton = () => {
-    const selectors = [
-      '.ytp-ad-skip-button-modern',
-      '.ytp-ad-skip-button',
-      '.ytp-skip-ad-button',
-      'button.ytp-ad-skip-button',
-      'button.ytp-skip-ad-button',
-      'button.ytp-ad-skip-button-modern',
-      'button[class*="ad-skip-button"]',
-      'button[class*="skip-ad-button"]',
-      'button[class*="ytp-skip-ad"]',
-      'button[class*="ytp-ad-skip"]',
-    ]
-    for (const sel of selectors) {
-      const nodes = document.querySelectorAll(sel)
-      for (const el of nodes) {
-        if (isVisible(el)) return el
-      }
-    }
-    return null
-  }
-
-  const skipAdIfPresent = () => {
-    const player = document.querySelector('#movie_player')
-    if (!player) return
-    // Strict ad detection: only YouTube's own state classes on #movie_player
-    const isAd = player.classList.contains('ad-showing') ||
-                 player.classList.contains('ad-interrupting')
-    if (!isAd) return
-    // Prefer explicit skip button
-    const skipBtn = findExplicitSkipButton()
-    if (skipBtn) {
-      aggressiveClick(skipBtn)
-      return
-    }
-    // Fast-forward only if no skip button (fallback, same as v0.7.4)
-    const video = document.querySelector('video.html5-main-video') ||
-                  document.querySelector('video.video-stream') ||
-                  document.querySelector('video')
-    if (video && !isNaN(video.duration) && video.duration > 0 && isFinite(video.duration)) {
-      try {
-        video.currentTime = video.duration
-        video.muted = true
-      } catch {}
-    }
-  }
-
-  // Run skip check frequently while ads are showing
-  setInterval(skipAdIfPresent, 250)
-
-  // Also observe DOM mutations for class changes
-  try {
-    const observer = new MutationObserver(skipAdIfPresent)
-    const startObserving = () => {
-      const player = document.querySelector('#movie_player')
-      if (player) {
-        observer.observe(player, { attributes: true, attributeFilter: ['class'] })
-      } else {
-        // Retry until player exists
-        setTimeout(startObserving, 500)
-      }
-    }
-    startObserving()
-  } catch {}
 
   // Pause video on FIRST play after app startup (runs once per iframe lifetime)
   if (!window.__youtermInitialPauseScheduled) {
@@ -736,18 +656,27 @@ html.youterm-video-fill video.video-stream {
     return null
   }
 
+  const EXEC_TIMEOUT_MS = 1000
+  const withTimeout = <T>(p: Promise<T>): Promise<T | null> =>
+    Promise.race([
+      p,
+      new Promise<null>(resolve => setTimeout(() => resolve(null), EXEC_TIMEOUT_MS)),
+    ])
+
+  let pollInFlight = false
   const pollPlayback = async () => {
-    if (disposed) return
+    if (disposed || pollInFlight) return
     const frame = getYoutubeFrame()
     if (!frame) return
+    pollInFlight = true
     try {
-      const result = await frame.executeJavaScript(
+      const result = await withTimeout(frame.executeJavaScript(
         `(() => {
           const v = document.querySelector('video')
           if (!v || isNaN(v.currentTime) || v.currentTime < 1) return null
           return { t: Math.floor(v.currentTime), url: window.location.href }
         })()`,
-      )
+      ))
       if (!result || typeof result !== 'object') return
       const { t, url } = result as { t: number; url: string }
       if (!url || typeof url !== 'string') return
@@ -766,14 +695,24 @@ html.youterm-video-fill video.video-stream {
       // Cross-origin access is allowed via webFrameMain.executeJavaScript but may
       // still fail during page transitions or if the iframe isn't YouTube yet.
       // Silent failure is OK; the next poll will retry.
+    } finally {
+      pollInFlight = false
     }
   }
 
   const pollInterval = setInterval(pollPlayback, PLAYBACK_POLL_INTERVAL_MS)
 
-  const settingsUnsub = settings.subscribe(() => {
+  // Only re-run applyVideoFillToAllYoutubeFrames when the video-fill setting
+  // actually flips. Firing it on every settings update (e.g., for every
+  // playback-position URL save) queues one frame.executeJavaScript per change
+  // and previously compounded with ad-playback activity until main stalled.
+  let lastVideoFillMode = settings.getSettings().videoFillMode
+  const settingsUnsub = settings.subscribe(s => {
     if (disposed) return
-    void applyVideoFillToAllYoutubeFrames()
+    if (s.videoFillMode !== lastVideoFillMode) {
+      lastVideoFillMode = s.videoFillMode
+      void applyVideoFillToAllYoutubeFrames()
+    }
   })
 
   return {
