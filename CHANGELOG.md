@@ -2,6 +2,24 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.24] — 2026-04-21
+
+### Added
+- **electron-builder を導入、`.app` として書き出せるように(#117)**
+  - `npm run package` で `release/mac-arm64/youterm.app` を生成(約 1 分)
+  - `npm run package:dmg` で DMG も出せる(配布用ではなく手元利用の選択肢として)
+  - 設定は package.json の `build` フィールド、`appId = io.crewinc.youterm`、`productName = youterm`
+  - **署名・notarization は明示的に skip**(`mac.identity: null`)。方針通り GitHub 公開のみ、配布はしない
+  - `asarUnpack` で node-pty の native binary を非 asar 領域に配置(native モジュール必須)
+  - アイコンは未設定(default Electron icon、#118 で対応予定)
+  - description / author フィールドは未記入(#119 で対応予定)
+
+### Changed
+- `.gitignore` に `release/` を追加
+- `build/` ディレクトリを新設(electron-builder の buildResources 置き場、#118 で .icns を入れる)
+
+---
+
 ## [0.15.23] — 2026-04-20
 
 ### Fixed
