@@ -2,6 +2,18 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.19] — 2026-04-20
+
+### Fixed
+- **YouTube の「広告ブロッカーは許可されていません」ポップアップを自動解除**
+  - 症状: 視聴中に enforcement ポップアップが表示され、動画が停止。手動で閉じるか Cmd+Q で終了するしか無かった
+  - 対応: `AD_STRIP_SCRIPT` に `dismissAntiAdblockPopup` を追加。`ytd-enforcement-message-view-model` を基点に含む `tp-yt-paper-dialog` + `tp-yt-iron-overlay-backdrop` を削除、body のスクロールロックを解除、広告中でなければ `video.play()` で再開
+  - 誤検知対策: `ytd-enforcement-message-view-model` を必ず起点にして `.closest('tp-yt-paper-dialog')` で親に辿る設計。share / settings 等の別ダイアログは巻き込まない
+  - ポーリングは既存の ad-skip と同じ 3 秒間隔に相乗り(追加の CPU コストなし)
+  - YouTube がセレクタ名を変えたら効かなくなる構造なので、挙動がおかしくなったらこの commit を revert するだけで v0.15.18 相当に戻せる
+
+---
+
 ## [0.15.18] — 2026-04-20
 
 ### Fixed
