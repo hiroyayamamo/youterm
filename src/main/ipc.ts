@@ -784,9 +784,13 @@ html.youterm-video-fill video.video-stream {
     if (s.adBlockEnabled !== lastAdBlockState) {
       lastAdBlockState = s.adBlockEnabled
       await adBlock.setEnabled(s.adBlockEnabled)
-      // Reload iframe so filter change takes effect immediately
+      // Ad-block toggle also navigates the iframe to the homepage: the
+      // previous page may be wedged in a half-loaded state if the filter
+      // blocked a critical resource before disabling. Homepage is a
+      // guaranteed clean reload and also updates youtubeLastUrl via the
+      // normal navigation tracking once it completes.
       if (!view.isDestroyed()) {
-        view.send('youtube:reload')
+        view.send('youtube:reload', 'https://www.youtube.com/')
       }
     }
   })

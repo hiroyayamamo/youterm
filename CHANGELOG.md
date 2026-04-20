@@ -2,6 +2,18 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.7] — 2026-04-20
+
+### Fixed
+- **Ad block を ON にすると YouTube が真っ黒になり、OFF にしても戻らない問題を修正**
+  - 原因 1: v0.15.6 で使った `adsAndTrackingLists` が **ads + tracking/analytics** の両方を含む組み合わせで、YouTube player が初期化時に叩く analytics 系エンドポイント(stats.youtube.com 等)も遮断してしまい、player 初期化失敗 → 黒画面
+  - 原因 2: トグル OFF した時の iframe reload が「同じ URL にもう一度アクセス」だけだったため、一度壊れた YouTube 状態(service worker cache 等)から復旧できず黒のまま
+  - 対応 1: フィルタを `adsLists`(ads のみ)に変更。tracking / analytics 系はブロックしないので player 初期化は通常どおり完走
+  - 対応 2: ad-block トグル時は iframe を**ホームページに強制遷移**(`https://www.youtube.com/`)。`youtube:reload` IPC に optional `url` 引数を追加、main 側で toggle 時は homepage URL を明示。通常の Cmd+R は引数なしで現在 URL のリロード維持
+  - これで ON にしても player が動き続け、万が一再び黒画面が出ても OFF 切替で確実に復旧可能
+
+---
+
 ## [0.15.6] — 2026-04-20
 
 ### Changed

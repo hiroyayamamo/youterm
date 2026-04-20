@@ -1,5 +1,5 @@
 import { ElectronBlocker } from '@ghostery/adblocker-electron'
-import { adsAndTrackingLists } from '@ghostery/adblocker'
+import { adsLists } from '@ghostery/adblocker'
 import type { Session } from 'electron'
 
 export interface AdBlockController {
@@ -10,10 +10,13 @@ export interface AdBlockController {
 export async function createAdBlockController(session: Session): Promise<AdBlockController> {
   let blocker: ElectronBlocker | null = null
   try {
-    // Cosmetic filters need session.registerPreloadScript (Electron 35+).
-    // We're on Electron 32, so network filters only — plenty to block
-    // googleads.g.doubleclick.net and friends.
-    blocker = await ElectronBlocker.fromLists(fetch, adsAndTrackingLists, {
+    // `adsLists` is deliberate: `adsAndTrackingLists` was breaking YouTube's
+    // player (black iframe) because the privacy / tracking rules also catch
+    // google-analytics and similar endpoints the player relies on. Cosmetic
+    // filters need session.registerPreloadScript (Electron 35+), which we're
+    // not on yet — network rules alone still handle googleads.g.doubleclick
+    // and the DOM-level skip below mops up anything that leaks through.
+    blocker = await ElectronBlocker.fromLists(fetch, adsLists, {
       loadCosmeticFilters: false,
       loadNetworkFilters: true,
     })
