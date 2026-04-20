@@ -40,6 +40,6 @@ export function buildSplash(version: string): string {
     lines.join('\r\n') +
     '\r\n' +
     `  ${tagline}` +
-    '\r\n\r\n'
+    '\r\n'
   )
 }

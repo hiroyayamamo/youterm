@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.17] — 2026-04-20
+
+### Fixed
+- **起動時の splash と最初のプロンプトの間に「謎の 1 行空白(実体は `%` だけの行)」が出ていた件を修正**
+  - 原因: zsh の `PROMPT_SP`(部分行保護機能)が初回プロンプト直前に reverse video の `%` を 1 文字だけ出力する。このマーカー文字が `PROMPT_EOL_MARK` パラメータで、**デフォルト値が `%`**。splash の末尾で完全に改行していても、zsh は初回起動時にこのマーカー行を必ず描画する
+  - 対応: pty env に **`PROMPT_EOL_MARK=''`** を追加。マーカー文字が空になり、PROMPT_SP の機構自体は生きたまま行だけ見えなくなる(端末が partial line の扱いを誤って上書きするような事故も発生しない安全な抑止)
+  - 併せて `splash.ts` 末尾の `\r\n\r\n` を `\r\n` に短縮。tagline 下の余計な空行を 1 行削減
+
+---
+
 ## [0.15.16] — 2026-04-20
 
 ### Fixed

@@ -48,6 +48,11 @@ export async function attachTabs(
         // file that youterm never created, producing a confusing
         // "No such file or directory" line in every new tab.
         SHELL_SESSIONS_DISABLE: '1',
+        // Hide zsh's partial-line indicator (the reverse-video `%` that
+        // PROMPT_SP prints on its very first prompt). It otherwise shows
+        // up as a lone character on a line of its own right after the
+        // splash — the "謎の空白" that looks like extra blank output.
+        PROMPT_EOL_MARK: '',
       },
       cols: 120,
       rows: 30,
