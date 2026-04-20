@@ -449,11 +449,15 @@ html.youterm-video-fill ytd-watch-flexy #player {
   padding: 0 !important;
 }
 
-/* Player fills the viewport */
+/* Player fills the viewport. Explicit top/left/right/bottom + transform: none
+   defeats any inline transform/margin YouTube's player script writes back on
+   resize or after videoFill is toggled off→on. */
 html.youterm-video-fill #movie_player {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
   max-width: none !important;
@@ -462,20 +466,39 @@ html.youterm-video-fill #movie_player {
   margin: 0 !important;
   padding: 0 !important;
   background: #000 !important;
+  transform: none !important;
 }
 
-/* Video fills its container */
+/* Video container is pinned to the player's full box */
 html.youterm-video-fill .html5-video-container {
-  width: 100% !important;
-  height: 100% !important;
   position: absolute !important;
   inset: 0 !important;
-}
-html.youterm-video-fill video.html5-main-video,
-html.youterm-video-fill video.video-stream {
   width: 100% !important;
   height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+}
+
+/* The <video> itself: explicit absolute positioning + object-fit:contain +
+   object-position:center pins the content dead-center of the window, and
+   ignores any width/left/transform YouTube writes inline on resize. */
+html.youterm-video-fill video.html5-main-video,
+html.youterm-video-fill video.video-stream {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
   object-fit: contain !important;
+  object-position: center center !important;
+  transform: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
@@ -605,6 +628,43 @@ html.youterm-video-fill video.video-stream {
     }, 300)
     setTimeout(() => clearInterval(retryInterval), 30000)
   }
+
+  // Clear inline offset styles on #movie_player and <video> after resize.
+  // When the iframe's viewport changes (e.g. Cmd+1 ↔ Cmd+2 toggles the nav
+  // bar push-down, changing iframe height by ~29px), YouTube's player script
+  // writes inline transform / margin / width onto these elements. Our
+  // video-fill CSS uses !important, but inline values still win on the
+  // compositor for one frame, leaving the video visibly offset. Clearing
+  // them after each resize keeps the CSS in authoritative control. No-ops
+  // when video-fill is off, so normal YouTube layout is untouched.
+  const clearVideoFillInlineStyles = () => {
+    if (!document.documentElement.classList.contains('youterm-video-fill')) return
+    const targets = [
+      document.querySelector('#movie_player'),
+      document.querySelector('video.html5-main-video'),
+      document.querySelector('video.video-stream'),
+      document.querySelector('.html5-video-container'),
+    ]
+    for (const el of targets) {
+      if (!el) continue
+      el.style.transform = ''
+      el.style.margin = ''
+      el.style.left = ''
+      el.style.top = ''
+      el.style.right = ''
+      el.style.bottom = ''
+      el.style.width = ''
+      el.style.height = ''
+    }
+  }
+  window.addEventListener('resize', () => {
+    // Clear immediately + next frame + after YouTube's deferred write (~100ms).
+    // Three shots catches the resize handler's early write and any rAF/timer
+    // deferred writes it schedules.
+    clearVideoFillInlineStyles()
+    requestAnimationFrame(clearVideoFillInlineStyles)
+    setTimeout(clearVideoFillInlineStyles, 100)
+  })
 })()
 `.trim()
 
