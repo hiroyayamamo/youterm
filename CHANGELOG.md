@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.18] — 2026-04-20
+
+### Fixed
+- **splash とプロンプトの間に残っていた空行を完全に消去**
+  - v0.15.17 で `PROMPT_EOL_MARK=''` によりマーカーの `%` は消えたが、PROMPT_SP 自体は依然として「空行 + `\r`」を出していて、空白の 1 行がそのまま残っていた
+  - 対応: zsh を **`+o PROMPT_SP` 付きで起動**(`spawn('/bin/zsh', ['-l', '+o', 'PROMPT_SP'], ...)`)。部分行保護機能自体がオフになり、positioning の空白行も出なくなる
+  - `PROMPT_EOL_MARK=''` の env 設定は**defense-in-depth で残す**(ユーザ .zshrc が `setopt PROMPT_SP` で再有効化した場合も、最悪マーカーだけ非表示でよりマシな見た目に)
+
+---
+
 ## [0.15.17] — 2026-04-20
 
 ### Fixed

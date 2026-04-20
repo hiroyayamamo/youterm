@@ -36,7 +36,11 @@ export async function attachTabs(
         // Directory doesn't exist or unreadable, stick with homedir
       }
     }
-    const rawPty = spawn('/bin/zsh', ['-l'], {
+    // `+o PROMPT_SP` turns off zsh's partial-line preservation. Hiding the
+    // mark via PROMPT_EOL_MARK='' alone still emits the positioning line
+    // (spaces + \r) that leaves a visible blank row between the splash and
+    // the first prompt. Turning the option off removes both.
+    const rawPty = spawn('/bin/zsh', ['-l', '+o', 'PROMPT_SP'], {
       cwd,
       env: {
         ...process.env,
