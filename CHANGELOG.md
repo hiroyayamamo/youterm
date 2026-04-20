@@ -2,6 +2,25 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.6] — 2026-04-20
+
+### Changed
+- **`@ghostery/adblocker-electron` の network filter 層を再有効化**(v0.14.2 で bisect のため no-op 化していたもの)
+  - 背景: v0.14.x のフリーズは最終的に CDP Fetch intercept が原因と確定し、それは v0.14.0 で削除済み。adblocker-electron の webRequest 連携自体は濡れ衣だった可能性が高いので復活させる
+  - 実装: `src/main/adBlock.ts` を元の `ElectronBlocker.fromLists(fetch, adsAndTrackingLists, { loadCosmeticFilters: false, loadNetworkFilters: true })` に戻し、`setEnabled` で `enableBlockingInSession` / `disableBlockingInSession` をトグル
+  - `INITIAL_SETTINGS.adBlockEnabled` を `true` に戻す(新規ユーザーは最初から有効)
+  - cosmetic filter は Electron 35+ が必要(`session.registerPreloadScript`)なため引き続き無効、network 層のみ
+  - Options パネルのトグルは今度こそ意味を持つ(ON / OFF で iframe reload + adblocker の enable/disable が走る、v0.7.0 の設計どおり)
+  - 防御レイヤ構成(最終形):
+    1. `adblocker-electron` network filter(googleads, doubleclick 等をネットワーク層で遮断)
+    2. DOM スキップ(`#movie_player.ad-showing` → skip ボタンクリック or fast-forward)
+  - v1 に向けての切り分け完了。使ってみて再びフリーズ/黒画面が出たら adblocker-electron が真犯人確定、その時は再無効化 + 代替手段を検討
+
+### Fixed
+- テスト: `adBlockEnabled` のデフォルト期待値を `false` → `true` に戻す(4 テスト修正、合計 113 のまま)
+
+---
+
 ## [0.15.5] — 2026-04-20
 
 ### Changed
