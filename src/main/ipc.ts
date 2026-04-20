@@ -484,18 +484,38 @@ html.youterm-video-fill video.video-stream {
     } catch {}
   }
 
-  // v0.15.9 diagnostic: DOM-based ad skip has been removed. The previous
-  // skipAdIfPresent interval + MutationObserver + aggressiveClick sequence is
-  // the last ad-related code path running in this app after the full
-  // adblocker-electron removal in v0.15.8, and users still hit a total
-  // main-process freeze on video playback. Strip it out and keep only the
-  // initial-pause helper so we can confirm whether this code is the cause.
-  // Ads will play fully during this test — re-add a safer skip if freeze
-  // disappears.
+  // Minimal DOM ad-skip (v0.15.10). The aggressive version — pointerdown /
+  // mousedown / pointerup / mouseup / click sprays at 250 ms — froze main
+  // in v0.15.8 because the click cascades pummeled YouTube's player state
+  // machine faster than it could settle. This version:
+  //   - polls at 3000 ms (same order as a human's reaction, not a DoS)
+  //   - issues a single plain el.click() per ad
+  //   - a sticky `clickedThisAd` flag prevents re-clicking while the player
+  //     is still transitioning; it clears the next time the ad class goes
+  //     away, so the next ad gets exactly one click too
+  //   - no MutationObserver
+  // If freezes return, revert to the v0.15.9 initial-pause-only AD_STRIP_SCRIPT.
   const AD_STRIP_SCRIPT = `
 (() => {
   if (window.__youtermAdStripInstalled) return
   window.__youtermAdStripInstalled = true
+
+  let clickedThisAd = false
+  const SKIP_SELECTORS = '.ytp-ad-skip-button-modern, .ytp-ad-skip-button, .ytp-skip-ad-button'
+
+  const skipAdIfPresent = () => {
+    const player = document.querySelector('#movie_player')
+    if (!player) return
+    const isAd = player.classList.contains('ad-showing') ||
+                 player.classList.contains('ad-interrupting')
+    if (!isAd) { clickedThisAd = false; return }
+    if (clickedThisAd) return
+    const btn = document.querySelector(SKIP_SELECTORS)
+    if (!btn || btn.offsetParent === null) return
+    try { btn.click() } catch {}
+    clickedThisAd = true
+  }
+  setInterval(skipAdIfPresent, 3000)
 
   // Pause video on FIRST play after app startup (runs once per iframe lifetime)
   if (!window.__youtermInitialPauseScheduled) {

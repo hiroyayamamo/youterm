@@ -2,6 +2,20 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.10] — 2026-04-20
+
+### Added
+- **最小構成の DOM 広告スキップを復活**(v0.15.9 の撤去で凍結原因確定済のため、その上で安全版を作成)
+  - スキップ方針:
+    - `setInterval` は **3000ms**(旧 250ms から 12 倍遅く、プレイヤーがひと呼吸つける間隔に)
+    - クリックは `el.click()` **1 回だけ**(旧 `aggressiveClick` の pointerdown / mousedown / pointerup / mouseup / click 連射は削除 — これが凍結の原因)
+    - **`clickedThisAd` フラグ**で同じ広告中の連打を抑止。`ad-showing` クラスが外れた瞬間に flag リセットされ、次の広告はまた 1 回クリック
+    - `MutationObserver` なし(pure interval で十分)
+  - 効果: 5 秒後にスキップボタンが出る広告は**自動で 1 回クリック**して飛ぶ。skip 不可の短い広告はそのまま流れる
+  - もし再び凍結が発生した場合は v0.15.9(初回 pause だけ)に戻すのが次の一手
+
+---
+
 ## [0.15.9] — 2026-04-20 (diagnostic)
 
 ### Changed
