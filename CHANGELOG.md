@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.25] — 2026-04-21
+
+### Added
+- **App アイコンを設定(#118)**
+  - ユーザ提供の 1024×1024 PNG(宇宙人 CRT ロゴ)を基に、`sips` で 16 / 32 / 64 / 128 / 256 / 512 / 1024 の 7 サイズを生成、`iconutil -c icns` で `build/icon.icns` に変換
+  - `build/icon.png`(1024×1024 マスター)と `build/icon.icns` を配置 → electron-builder が自動検出して `.app/Contents/Resources/icon.icns` に埋め込み
+  - Dock / Launchpad / Finder / Cmd+Tab の全てで新アイコンが表示される
+
+---
+
 ## [0.15.24] — 2026-04-21
 
 ### Added
