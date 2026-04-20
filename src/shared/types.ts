@@ -21,7 +21,6 @@ export interface YoutermAPI {
   settingsSetTransparency(value: number): void
   settingsSetColor(color: ColorKey): void
   settingsSetBlur(value: number): void
-  settingsSetAdBlock(value: boolean): void
   settingsReset(): void
   onTabsState(cb: (state: TabsState) => void): () => boolean
   onStartRename(cb: (tabId: string) => void): () => boolean
@@ -43,7 +42,6 @@ export interface Settings {
   blur: number
   youtubeLastUrl: string | null
   videoFillMode: boolean
-  adBlockEnabled: boolean
 }
 
 export const INITIAL_SETTINGS: Settings = {
@@ -53,7 +51,6 @@ export const INITIAL_SETTINGS: Settings = {
   blur: 0.1,
   youtubeLastUrl: null,
   videoFillMode: false,
-  adBlockEnabled: true,
 }
 
 export const COLOR_VALUES: Record<ColorKey, { r: number; g: number; b: number }> = {

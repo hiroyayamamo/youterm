@@ -43,9 +43,6 @@ export function validateAndNormalize(raw: unknown): Settings {
   const videoFillMode =
     typeof r.videoFillMode === 'boolean' ? r.videoFillMode : INITIAL_SETTINGS.videoFillMode
 
-  const adBlockEnabled =
-    typeof r.adBlockEnabled === 'boolean' ? r.adBlockEnabled : INITIAL_SETTINGS.adBlockEnabled
-
   return {
     transparency,
     bgColor,
@@ -53,7 +50,6 @@ export function validateAndNormalize(raw: unknown): Settings {
     blur,
     youtubeLastUrl,
     videoFillMode,
-    adBlockEnabled,
   }
 }
 

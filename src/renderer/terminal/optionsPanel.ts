@@ -10,7 +10,6 @@ export interface OptionsPanelCallbacks {
   onTransparencyInput(value: number): void
   onBlurInput(value: number): void
   onColorSelect(color: ColorKey): void
-  onAdBlockChange(enabled: boolean): void
   onReset(): void
 }
 
@@ -42,13 +41,6 @@ export function createOptionsPanel(callbacks: OptionsPanelCallbacks): OptionsPan
       </div>
     </div>
 
-    <div class="options-section">
-      <label class="checkbox-row">
-        <input type="checkbox" id="opt-ad-block" />
-        <span>Ad Block</span>
-      </label>
-    </div>
-
     <div class="options-footer">
       <button id="opt-reset" class="btn-reset">Reset</button>
       <span class="hint">Cmd+, to close</span>
@@ -61,8 +53,6 @@ export function createOptionsPanel(callbacks: OptionsPanelCallbacks): OptionsPan
   const blurValue = panel.querySelector<HTMLSpanElement>('#opt-blur-value')!
   const swatches = panel.querySelectorAll<HTMLButtonElement>('.swatch')
   const resetBtn = panel.querySelector<HTMLButtonElement>('#opt-reset')!
-  const adBlockCheckbox = panel.querySelector<HTMLInputElement>('#opt-ad-block')!
-  const adBlockLabel = panel.querySelector<HTMLLabelElement>('.checkbox-row')!
 
   slider.addEventListener('input', () => {
     callbacks.onTransparencyInput(slider.valueAsNumber)
@@ -84,12 +74,6 @@ export function createOptionsPanel(callbacks: OptionsPanelCallbacks): OptionsPan
     callbacks.onReset()
   })
 
-  adBlockCheckbox.addEventListener('change', () => {
-    callbacks.onAdBlockChange(adBlockCheckbox.checked)
-  })
-  adBlockCheckbox.addEventListener('click', e => e.stopPropagation())
-  adBlockLabel.addEventListener('click', e => e.stopPropagation())
-
   // Prevent clicks inside the panel from bubbling to the document listener (used to close)
   panel.addEventListener('click', e => e.stopPropagation())
 
@@ -103,7 +87,6 @@ export function createOptionsPanel(callbacks: OptionsPanelCallbacks): OptionsPan
       swatches.forEach(btn => {
         btn.classList.toggle('is-active', btn.dataset.color === s.bgColor)
       })
-      adBlockCheckbox.checked = s.adBlockEnabled
     },
     focusFirstInput() {
       slider.focus()
