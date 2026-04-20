@@ -193,12 +193,14 @@ async function init(): Promise<void> {
 
   window.youtermAPI.onPanelToggle(() => panelCtrl.toggle())
 
-  window.youtermAPI.onYoutubeReload(() => {
+  window.youtermAPI.onYoutubeReload(url => {
     const iframe = document.getElementById('youtube-iframe') as HTMLIFrameElement | null
     if (!iframe) return
-    const currentSrc = iframe.src
+    // If main provided a URL (e.g., homepage on ad-block toggle), navigate
+    // there; otherwise just reload the current URL.
+    const target = url ?? iframe.src
     iframe.src = 'about:blank'
-    requestAnimationFrame(() => { iframe.src = currentSrc })
+    requestAnimationFrame(() => { iframe.src = target })
   })
 
   const applyModeClass = (mode: string) => {

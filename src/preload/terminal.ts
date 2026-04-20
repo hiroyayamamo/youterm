@@ -5,6 +5,7 @@ type StateHandler = (s: AppState) => void
 type PtyDataHandler = (p: { tabId: string; data: string }) => void
 type SettingsHandler = (s: Settings) => void
 type VoidHandler = () => void
+type YoutubeReloadHandler = (url?: string) => void
 type TabsStateHandler = (s: TabsState) => void
 type StartRenameHandler = (tabId: string) => void
 
@@ -12,7 +13,7 @@ const stateHandlers = new Set<StateHandler>()
 const ptyDataHandlers = new Set<PtyDataHandler>()
 const settingsHandlers = new Set<SettingsHandler>()
 const panelToggleHandlers = new Set<VoidHandler>()
-const youtubeReloadHandlers = new Set<VoidHandler>()
+const youtubeReloadHandlers = new Set<YoutubeReloadHandler>()
 const tabsStateHandlers = new Set<TabsStateHandler>()
 const startRenameHandlers = new Set<StartRenameHandler>()
 
@@ -28,8 +29,8 @@ ipcRenderer.on('settings:changed', (_e, s: Settings) => {
 ipcRenderer.on('panel:toggle', () => {
   for (const h of panelToggleHandlers) h()
 })
-ipcRenderer.on('youtube:reload', () => {
-  for (const h of youtubeReloadHandlers) h()
+ipcRenderer.on('youtube:reload', (_e, url?: string) => {
+  for (const h of youtubeReloadHandlers) h(url)
 })
 let activeTabId: string | null = null
 ipcRenderer.on('tabs:state', (_e, s: TabsState) => {
@@ -65,7 +66,7 @@ contextBridge.exposeInMainWorld('youtermAPI', {
     panelToggleHandlers.add(cb)
     return () => panelToggleHandlers.delete(cb)
   },
-  onYoutubeReload(cb: VoidHandler) {
+  onYoutubeReload(cb: YoutubeReloadHandler) {
     youtubeReloadHandlers.add(cb)
     return () => youtubeReloadHandlers.delete(cb)
   },

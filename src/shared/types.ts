@@ -16,7 +16,7 @@ export interface YoutermAPI {
   ptyResize(tabId: string, size: { cols: number; rows: number }): void
   onSettingsChanged(cb: (settings: Settings) => void): () => boolean
   onPanelToggle(cb: () => void): () => boolean
-  onYoutubeReload(cb: () => void): () => boolean
+  onYoutubeReload(cb: (url?: string) => void): () => boolean
   settingsGetInitial(): Promise<Settings>
   settingsSetTransparency(value: number): void
   settingsSetColor(color: ColorKey): void
