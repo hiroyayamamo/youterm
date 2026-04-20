@@ -1,6 +1,6 @@
 {
   "name": "youterm",
-  "version": "0.15.15",
+  "version": "0.15.16",
   "private": true,
   "type": "module",
   "main": "./out/main/index.js",

@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.16] — 2026-04-20
+
+### Fixed
+- **新規 shell 起動時に出ていた `Restored session: ...` + `rm: No such file or directory` を抑制**
+  - 原因: macOS 付属の `/etc/zshrc_Apple_Terminal` に「Shell Session」機能が組み込まれていて、`TERM_SESSION_ID` が inherited されてると `~/.zsh_sessions/<id>.session` を source → rm しようとする。youterm はそのファイルを作っていないので rm が毎回失敗してエラー出力
+  - 対応: pty spawn 時の env に Apple 自身が用意している **`SHELL_SESSIONS_DISABLE=1` を明示**。session 復元機能が丸ごとスキップされ、無駄な `Restored session:` の表示も無くなる
+  - youterm は自前のシェルセッション管理(タブ数保存・cwd 保存)を v0.4 / v0.10 で持っているので、Apple のそれを使う必要なし
+
+---
+
 ## [0.15.15] — 2026-04-20
 
 ### Changed
