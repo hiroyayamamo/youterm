@@ -536,6 +536,36 @@ html.youterm-video-fill video.video-stream {
   }
   setInterval(skipAdIfPresent, 3000)
 
+  // Dismiss YouTube's anti-adblock enforcement popup ("Ad blockers are not
+  // allowed…"). Anchored on <ytd-enforcement-message-view-model> to avoid
+  // nuking unrelated dialogs (share, settings). Removes the containing
+  // <tp-yt-paper-dialog> + its backdrop, unlocks body scroll, and resumes
+  // the video if YouTube paused it while the popup was up. 3s cadence,
+  // same polling budget as the ad-skip loop.
+  const dismissAntiAdblockPopup = () => {
+    const enforcers = document.querySelectorAll('ytd-enforcement-message-view-model')
+    if (enforcers.length === 0) return
+    enforcers.forEach((el) => {
+      const dlg = el.closest('tp-yt-paper-dialog') || el
+      try { dlg.remove() } catch {}
+    })
+    document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach((b) => {
+      try { b.remove() } catch {}
+    })
+    document.documentElement.style.overflow = ''
+    document.body.style.overflow = ''
+    const player = document.querySelector('#movie_player')
+    const adShowing = !!player && (
+      player.classList.contains('ad-showing') ||
+      player.classList.contains('ad-interrupting')
+    )
+    const video = document.querySelector('video.html5-main-video')
+    if (video && video.paused && !adShowing) {
+      try { video.play() } catch {}
+    }
+  }
+  setInterval(dismissAntiAdblockPopup, 3000)
+
   // Pause video on FIRST play after app startup (runs once per iframe lifetime)
   if (!window.__youtermInitialPauseScheduled) {
     window.__youtermInitialPauseScheduled = true
