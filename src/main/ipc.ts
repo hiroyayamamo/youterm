@@ -184,13 +184,13 @@ export async function attachTabs(
   }
   tabsController.subscribe(broadcastState)
 
-  // Dynamic window title: "Uterm - {active tab name}"
+  // Dynamic window title: "youterm - {active tab name}"
   const updateWindowTitle = () => {
     if (win.isDestroyed()) return
     const s = tabsController.getState()
     const active = s.tabs.find(t => t.id === s.activeId)
     const name = active?.customName ?? 'zsh'
-    win.setTitle(`Uterm - ${name}`)
+    win.setTitle(`youterm - ${name}`)
   }
   const titleUnsub = tabsController.subscribe(updateWindowTitle)
   updateWindowTitle() // Initial title

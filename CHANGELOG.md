@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.14] — 2026-04-20
+
+### Changed
+- **ウィンドウタイトルの表示を `Uterm` → `youterm` に変更**
+  - 初期タイトル: `Uterm` → `youterm`
+  - 動的タイトル: `Uterm - <tab name>` → `youterm - <tab name>`
+  - プロダクト名と揃える(`package.json`、スプラッシュ、CHANGELOG はすでに `youterm` 表記)
+
+---
+
 ## [0.15.13] — 2026-04-20
 
 ### Changed
