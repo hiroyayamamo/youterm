@@ -173,12 +173,21 @@ html, body {
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* YouTube iframe (bottom layer) */
+/* YouTube iframe (bottom layer). Always pushed down 29px from the top to
+   match the fixed chrome height — nav bar in youtube-only mode and tab bar
+   in overlay / terminal-only mode are both 29px tall. Keeping the iframe
+   the same size across all modes means (a) YouTube's player never sees a
+   resize when modes switch, so the video stays centered without inline
+   style churn, and (b) the video's visual center lines up with the visible
+   area below the chrome in every mode. */
 #youtube-iframe {
   position: fixed;
-  inset: 0;
+  top: 29px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
-  height: 100%;
+  height: calc(100% - 29px);
   border: 0;
   z-index: 0;
   transition: opacity 0.15s ease;
@@ -187,15 +196,6 @@ html, body {
 /* Mode-driven visibility */
 body.mode-youtube-only #terminal-root {
   display: none;
-}
-
-/* In youtube-only mode the nav bar (29px) sits at top: 0, so push the
-   iframe below it. Without this the YouTube masthead is hidden behind
-   the nav bar. Overlay / terminal-only modes keep the full-viewport
-   iframe because the nav bar isn't visible there. */
-body.mode-youtube-only #youtube-iframe {
-  top: 29px;
-  height: calc(100% - 29px);
 }
 
 /* Browser-style YouTube nav bar — only shown in mode-youtube-only, where

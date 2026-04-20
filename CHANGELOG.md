@@ -2,6 +2,41 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.28] — 2026-04-21
+
+### Fixed
+- **Cmd+1 と Cmd+2 で Video Fill の動画中心位置が 14.5px ズレていた問題を根治**
+  - 原因: mode-youtube-only は iframe を `top: 29px` に押し下げていたが、mode-overlay は iframe が `inset: 0` で全画面を占有していた(タブバーは z-index 5 で被せてるだけ)。YouTube の player は iframe 内の 100vh を基準に動画を中央配置するため、overlay では動画中心が 14.5px 上にズレていた
+  - 対応: `#youtube-iframe` のデフォルトを `top: 29px / height: calc(100% - 29px)` に統一(全モード共通)。mode-specific の override を削除
+  - 結果: Cmd+1 / Cmd+2 / Cmd+3 のどれでも iframe サイズが一定 → モード切替で iframe のリサイズが発生しない → YouTube の player script がインラインスタイルを書き戻す誘発もない → 動画が常にウインドウの視認可能領域(上端 29px のクロムを除く)の中央に配置される
+  - v0.15.27 の resize ハンドラは保険として残置
+
+---
+
+## [0.15.27] — 2026-04-21
+
+### Fixed
+- **Cmd+1 ↔ Cmd+2 切替時の Video Fill 動画位置ズレを修正**
+  - 原因: mode-youtube-only は iframe を 29px 押し下げ、overlay は inset: 0 なので、切替のたびに iframe 高さが 29px 変動 → iframe 内で resize 発火 → YouTube の player script が `#movie_player` / `<video>` / `.html5-video-container` にインラインで `transform` / `margin` / `width` などを書き戻す → CSS `!important` は勝つものの、インライン値がコンポジット 1 フレーム分残って視覚的にズレて見える
+  - 対応: `AD_STRIP_SCRIPT` に `resize` ハンドラを追加。`html.youterm-video-fill` が付いている時だけ、`#movie_player` / `<video>` / `.html5-video-container` のインライン `transform / margin / left / top / right / bottom / width / height` を空文字で上書き(= CSS に委譲)
+  - 三段発射(即時 + 次フレーム + 100ms 後)で YouTube の deferred write も拾う
+  - video-fill が OFF のときは no-op なので通常の YouTube レイアウトには影響なし
+
+---
+
+## [0.15.26] — 2026-04-21
+
+### Fixed
+- **Video Fill(Cmd+Shift+F)中の動画位置が toggle off→on やウインドウ resize でズレることがあった件を修正**
+  - 原因: YouTube の player script が resize / 再表示のタイミングで `#movie_player` や `<video>` にインラインの `transform` / `margin` / 部分 width を書き戻す。我々の CSS は `top/left` しか固定していなかったため、これらの残存が中央ズレの原因になっていた
+  - 対応: `VIDEO_FILL_CSS` を補強 —
+    - `#movie_player` に `right: 0 / bottom: 0 / transform: none` を追加(ビューポート全面を 4 辺で固定)
+    - `.html5-video-container` に `transform: none / margin / padding: 0` を追加
+    - `<video>` に `position: absolute / top/left/right/bottom: 0 / transform: none / object-position: center center` を明示(インライン値を全て無効化して常に中央寄せ)
+  - 結果: toggle off→on、resize、別動画に遷移、どのタイミングでも動画が常にウインドウの上下左右中央に配置される
+
+---
+
 ## [0.15.25] — 2026-04-21
 
 ### Added
