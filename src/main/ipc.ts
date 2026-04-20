@@ -38,7 +38,17 @@ export async function attachTabs(
     }
     const rawPty = spawn('/bin/zsh', ['-l'], {
       cwd,
-      env: { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor' },
+      env: {
+        ...process.env,
+        TERM: 'xterm-256color',
+        COLORTERM: 'truecolor',
+        // Disable Apple Terminal's zsh session save/restore. Without this,
+        // /etc/zshrc_Apple_Terminal runs on shell startup, prints
+        // "Restored session: <timestamp>" and then tries to `rm` a session
+        // file that youterm never created, producing a confusing
+        // "No such file or directory" line in every new tab.
+        SHELL_SESSIONS_DISABLE: '1',
+      },
       cols: 120,
       rows: 30,
       name: 'xterm-256color',
