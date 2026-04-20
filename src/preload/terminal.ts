@@ -70,6 +70,9 @@ contextBridge.exposeInMainWorld('youtermAPI', {
     youtubeReloadHandlers.add(cb)
     return () => youtubeReloadHandlers.delete(cb)
   },
+  youtubeGoBack() { ipcRenderer.send('youtube:nav:back') },
+  youtubeGoForward() { ipcRenderer.send('youtube:nav:forward') },
+  youtubeReload() { ipcRenderer.send('youtube:nav:reload') },
   settingsGetInitial(): Promise<Settings> {
     return ipcRenderer.invoke('settings:get-initial')
   },

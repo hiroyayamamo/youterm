@@ -391,6 +391,8 @@ export interface YoutubeBridge {
   dispose(): void
   flushPlayback(): Promise<void>
   reloadAdBlockAndIframe(): Promise<void>
+  goBack(): Promise<void>
+  goForward(): Promise<void>
 }
 
 export async function attachYoutube(
@@ -784,12 +786,22 @@ html.youterm-video-fill video.video-stream {
     }
   })
 
-  return {
+  const bridge: YoutubeBridge = {
     flushPlayback: pollPlayback,
     async reloadAdBlockAndIframe() {
       if (!view.isDestroyed()) {
         view.send('youtube:reload')
       }
+    },
+    async goBack() {
+      const frame = getYoutubeFrame()
+      if (!frame) return
+      try { await frame.executeJavaScript('history.back()') } catch {}
+    },
+    async goForward() {
+      const frame = getYoutubeFrame()
+      if (!frame) return
+      try { await frame.executeJavaScript('history.forward()') } catch {}
     },
     dispose() {
       disposed = true
@@ -798,7 +810,19 @@ html.youterm-video-fill video.video-stream {
       view.removeListener('did-frame-navigate', onFrameNavigate)
       view.removeListener('will-frame-navigate', onWillFrameNavigateWrapper)
       view.removeListener('did-frame-finish-load', onFrameFinishLoad)
+      ipcMain.removeListener('youtube:nav:back', onNavBack)
+      ipcMain.removeListener('youtube:nav:forward', onNavForward)
+      ipcMain.removeListener('youtube:nav:reload', onNavReload)
       if (activeLoginWin && !activeLoginWin.isDestroyed()) activeLoginWin.close()
     },
   }
+
+  const onNavBack = () => { void bridge.goBack() }
+  const onNavForward = () => { void bridge.goForward() }
+  const onNavReload = () => { void bridge.reloadAdBlockAndIframe() }
+  ipcMain.on('youtube:nav:back', onNavBack)
+  ipcMain.on('youtube:nav:forward', onNavForward)
+  ipcMain.on('youtube:nav:reload', onNavReload)
+
+  return bridge
 }
