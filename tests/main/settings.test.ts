@@ -115,12 +115,11 @@ describe('transitionSettings', () => {
       expect(next.adBlockEnabled).toBe(true)
     })
     it('disables ad block', () => {
-      const prev: Settings = { ...INITIAL_SETTINGS, adBlockEnabled: true }
-      const next = transitionSettings(prev, { type: 'set-ad-block', value: false })
+      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-ad-block', value: false })
       expect(next.adBlockEnabled).toBe(false)
     })
     it('returns same reference when value already equals current', () => {
-      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-ad-block', value: false })
+      const next = transitionSettings(INITIAL_SETTINGS, { type: 'set-ad-block', value: true })
       expect(next).toBe(INITIAL_SETTINGS)
     })
   })
