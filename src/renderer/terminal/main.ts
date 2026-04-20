@@ -51,7 +51,7 @@ function createXtermInstance(): { term: Terminal; fit: FitAddon } {
       brightCyan: 'rgb(100, 255, 255)',
       brightWhite: 'rgb(0, 221, 255)',
     },
-    fontFamily: 'Menlo, monospace',
+    fontFamily: '"Hack Nerd Font Mono", Menlo, monospace',
     fontSize: 13,
     cursorBlink: true,
     scrollback: 10000,
