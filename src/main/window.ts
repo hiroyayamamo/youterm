@@ -83,7 +83,7 @@ export function createMainWindow(): WindowBundle {
   win.webContents.on('page-title-updated', event => {
     event.preventDefault()
   })
-  win.setTitle('Uterm')
+  win.setTitle('youterm')
 
   if (process.env.ELECTRON_RENDERER_URL) {
     win.webContents.loadURL(`${process.env.ELECTRON_RENDERER_URL}/terminal/index.html`)
