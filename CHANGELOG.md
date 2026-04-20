@@ -2,6 +2,15 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.12] — 2026-04-20
+
+### Changed
+- **`brightBlack` のコントラスト改善**: `rgb(80, 80, 80)` → `rgb(140, 140, 160)`
+  - 旧値は `rgba(0,0,0,0.75)` + backdrop-filter の半透明黒背景にほぼ同化して、コメント行・dim 表示・`grep` context などが読みづらかった
+  - 新値は少し青みがかった中間グレーで、Cyberpunk Neon パレットの他色とも馴染む
+
+---
+
 ## [0.15.11] — 2026-04-20
 
 ### Fixed
