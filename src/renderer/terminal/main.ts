@@ -42,7 +42,7 @@ function createXtermInstance(): { term: Terminal; fit: FitAddon } {
       magenta: 'rgb(255, 0, 255)',
       cyan: 'rgb(0, 221, 255)',
       white: 'rgb(224, 224, 224)',
-      brightBlack: 'rgb(80, 80, 80)',
+      brightBlack: 'rgb(140, 140, 160)',
       brightRed: 'rgb(255, 100, 150)',
       brightGreen: 'rgb(120, 255, 100)',
       brightYellow: 'rgb(255, 240, 80)',
