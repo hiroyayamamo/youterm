@@ -7,7 +7,6 @@ import type { TabsController } from './tabsController'
 import { createTabsController } from './tabsController'
 import { createRealTabsStore } from './tabsStore'
 import type { SettingsController } from './settingsController'
-import { createAdBlockController } from './adBlock'
 import { buildSplash } from './splash'
 import type { Settings, ColorKey } from '../shared/types'
 
@@ -310,9 +309,6 @@ export function attachSettings(
   const onSetBlur = (_e: unknown, value: unknown) => {
     if (typeof value === 'number') settings.dispatch({ type: 'set-blur', value })
   }
-  const onSetAdBlock = (_e: unknown, value: unknown) => {
-    if (typeof value === 'boolean') settings.dispatch({ type: 'set-ad-block', value })
-  }
   const onSetColor = (_e: unknown, color: unknown) => {
     if (typeof color === 'string' && (VALID_COLORS as string[]).includes(color)) {
       settings.dispatch({ type: 'set-color', color: color as ColorKey })
@@ -322,7 +318,6 @@ export function attachSettings(
 
   ipcMain.on('settings:set-transparency', onSetTransparency)
   ipcMain.on('settings:set-blur', onSetBlur)
-  ipcMain.on('settings:set-ad-block', onSetAdBlock)
   ipcMain.on('settings:set-color', onSetColor)
   ipcMain.on('settings:reset', onReset)
 
@@ -333,7 +328,6 @@ export function attachSettings(
     dispose() {
       ipcMain.removeListener('settings:set-transparency', onSetTransparency)
       ipcMain.removeListener('settings:set-blur', onSetBlur)
-      ipcMain.removeListener('settings:set-ad-block', onSetAdBlock)
       ipcMain.removeListener('settings:set-color', onSetColor)
       ipcMain.removeListener('settings:reset', onReset)
       ipcMain.removeHandler('settings:get-initial')
@@ -387,9 +381,6 @@ export async function attachYoutube(
 ): Promise<YoutubeBridge> {
   let disposed = false
   let activeLoginWin: BrowserWindow | null = null
-
-  const adBlock = await createAdBlockController(view.session)
-  await adBlock.setEnabled(settings.getSettings().adBlockEnabled)
 
   const VIDEO_FILL_CSS = `
 html.youterm-video-fill {
@@ -635,15 +626,18 @@ html.youterm-video-fill video.video-stream {
   async function applyVideoFillToAllYoutubeFrames(): Promise<void> {
     if (view.isDestroyed()) return
     const enabled = settings.getSettings().videoFillMode
-    const adBlockEnabled = settings.getSettings().adBlockEnabled
     const frames = view.mainFrame.frames
     for (const frame of frames) {
       if (frame.url && /^https:\/\/(?:[a-z0-9-]+\.)*youtube\.com/i.test(frame.url)) {
         await ensureVideoFillStyle(frame)
         await applyVideoFillClass(frame, enabled)
-        if (adBlockEnabled) {
-          await injectAdStrip(frame)
-        }
+        // DOM-level ad skip is always injected now. The network-layer
+        // adblocker was removed in v0.15.8 because @ghostery/adblocker-
+        // electron's webRequest integration either broke YouTube's player
+        // (adsAndTrackingLists) or froze the whole app during ad playback
+        // (adsLists). The DOM skip is harmless and lets ads start briefly
+        // before hitting the skip button or fast-forwarding.
+        await injectAdStrip(frame)
       }
     }
   }
@@ -777,22 +771,9 @@ html.youterm-video-fill video.video-stream {
 
   const pollInterval = setInterval(pollPlayback, PLAYBACK_POLL_INTERVAL_MS)
 
-  let lastAdBlockState = settings.getSettings().adBlockEnabled
-  const settingsUnsub = settings.subscribe(async s => {
+  const settingsUnsub = settings.subscribe(() => {
     if (disposed) return
     void applyVideoFillToAllYoutubeFrames()
-    if (s.adBlockEnabled !== lastAdBlockState) {
-      lastAdBlockState = s.adBlockEnabled
-      await adBlock.setEnabled(s.adBlockEnabled)
-      // Ad-block toggle also navigates the iframe to the homepage: the
-      // previous page may be wedged in a half-loaded state if the filter
-      // blocked a critical resource before disabling. Homepage is a
-      // guaranteed clean reload and also updates youtubeLastUrl via the
-      // normal navigation tracking once it completes.
-      if (!view.isDestroyed()) {
-        view.send('youtube:reload', 'https://www.youtube.com/')
-      }
-    }
   })
 
   return {
@@ -810,7 +791,6 @@ html.youterm-video-fill video.video-stream {
       view.removeListener('will-frame-navigate', onWillFrameNavigateWrapper)
       view.removeListener('did-frame-finish-load', onFrameFinishLoad)
       if (activeLoginWin && !activeLoginWin.isDestroyed()) activeLoginWin.close()
-      adBlock.dispose()
     },
   }
 }

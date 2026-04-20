@@ -2,6 +2,25 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.8] — 2026-04-20
+
+### Removed
+- **ネットワーク層 adblock を完全撤去、DOM スキップ 1 本に統一**
+  - v0.15.6 / v0.15.7 の再有効化試行で、`adsAndTrackingLists` → YouTube player 黒画面、`adsLists` → 広告再生時にアプリ全体フリーズが再現確認。Electron 32 + `@ghostery/adblocker-electron` + YouTube の組み合わせは webRequest 層の連携が根本的に安定せず、DevTools も開けない状態に入ることもあり配布形態として許容できない
+  - 対応: `@ghostery/adblocker-electron` / `@ghostery/adblocker` 依存をアンインストール、`src/main/adBlock.ts` を削除、`Settings.adBlockEnabled` フィールド・`set-ad-block` action・IPC(`settings:set-ad-block`)・`settingsSetAdBlock` API・Options パネルの Ad Block チェックボックスも全削除
+  - AD_STRIP_SCRIPT(DOM 監視 + 広告 skip)は `adBlockEnabled` のガードを外して **常に注入**。どの iframe 読み込みでも `#movie_player.ad-showing` を検知して即座にスキップボタンクリック or fast-forward
+  - 既存 `settings.json` に `adBlockEnabled: true/false` が残っていても `validateAndNormalize` が未知フィールドとして落とすので互換性問題なし
+  - テスト: 113 → 108(ad-block 関連 5 テスト削除)
+  - main bundle 48.87 → 44.97 kB、renderer 422.26 → 421.58 kB(網羅的でもなくだいたい同等)
+
+### Result
+- 広告対策の最終形: **DOM 監視スキップのみ**。プリロール広告は一瞬(1 秒以下)映るがすぐ skip
+- フリーズ/黒画面問題は根本解消(ネットワーク層の介入ゼロ)
+- Options パネルがよりシンプルに(Transparency / Blur / Background color / Reset だけ)
+- v1 に向けて adblock 機能は「後日 Electron 35+ にアップグレードしてから cosmetic filter 付きで再実装する」という位置付け
+
+---
+
 ## [0.15.7] — 2026-04-20
 
 ### Fixed

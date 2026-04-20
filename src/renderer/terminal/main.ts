@@ -104,7 +104,6 @@ async function init(): Promise<void> {
     onTransparencyInput: v => window.youtermAPI.settingsSetTransparency(v),
     onBlurInput: v => window.youtermAPI.settingsSetBlur(v),
     onColorSelect: c => window.youtermAPI.settingsSetColor(c),
-    onAdBlockChange: e => window.youtermAPI.settingsSetAdBlock(e),
     onReset: () => window.youtermAPI.settingsReset(),
   })
   root.appendChild(panel.element)
