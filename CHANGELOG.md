@@ -2,6 +2,23 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.9] — 2026-04-20 (diagnostic)
+
+### Changed
+- **DOM-level 広告スキップ(`setInterval` + `MutationObserver` + `aggressiveClick`)を一旦完全撤去**
+  - 背景: v0.15.8 でネットワーク層 adblock を削除したにも関わらず、動画再生時に **main プロセスまで巻き込むフルフリーズ**(Cmd+Q も効かず OS レベル強制終了のみ)がユーザ側で再現確認
+  - 残る唯一の ad-related コードパスは DOM スキップ(500ms ごとの `#movie_player.ad-showing` 監視 + 見つかると skip ボタンへの `aggressiveClick`)。`aggressiveClick` は pointerdown/mousedown/pointerup/mouseup/click を連射するため、YouTube 内部の state machine を激しく叩き、その応答が何らかの経路で main のイベントループに伝搬して詰まっている可能性が高い
+  - この版では AD_STRIP_SCRIPT から skip 機能を丸ごと削除し、**初回 pause**(起動直後の `play` イベントで 1 回だけ `video.pause()`)のみ残す
+  - トレードオフ: 広告は全長スキップされなくなる(プリロールを最後まで見る必要がある)。**フリーズが消えるかの切り分け用リリース**
+- `pollPlayback` に re-entry ガードと 1 秒タイムアウトを追加(`Promise.race`)。executeJavaScript が resolve しないときでも main が詰まらない
+- 設定変更時の `applyVideoFillToAllYoutubeFrames` 全フレーム再適用を、**`videoFillMode` が実際に変化した時のみ**に限定(v0.15.8 までは毎回走っていて、再生位置 URL 保存の度に執行されていた)
+
+### Expected result
+- ✅ フリーズが出なくなる → DOM スキップが真犯人確定 → v0.15.10 で**安全な最小実装の skip**(例: `click()` だけ、interval を 1000ms 以上、等)に置き換え
+- ❌ まだ凍る → 別のコードパスが原因。attachYoutube から他のリスナ(did-frame-navigate 等)を順に外して再切り分け
+
+---
+
 ## [0.15.8] — 2026-04-20
 
 ### Removed
