@@ -17,6 +17,9 @@ export interface YoutermAPI {
   onSettingsChanged(cb: (settings: Settings) => void): () => boolean
   onPanelToggle(cb: () => void): () => boolean
   onYoutubeReload(cb: (url?: string) => void): () => boolean
+  youtubeGoBack(): void
+  youtubeGoForward(): void
+  youtubeReload(): void
   settingsGetInitial(): Promise<Settings>
   settingsSetTransparency(value: number): void
   settingsSetColor(color: ColorKey): void

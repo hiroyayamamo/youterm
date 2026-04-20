@@ -2,6 +2,46 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.15.23] — 2026-04-20
+
+### Fixed
+- **nav bar の高さを 28 → 29px に微調整、tab-bar と 1px ズレていた件を修正**
+  - 原因: `#tab-bar` は `height: 28px` + `border-bottom: 1px`(`box-sizing` デフォルト = content-box)なので実際の占有高は 29px。nav bar は `box-sizing: border-box` で height: 28px だったため、実占有は 28px となり 1px 浅かった
+  - 対応: nav bar の `height: 28px` → `29px`、`body.mode-youtube-only #youtube-iframe` の押し下げ量も 28 → 29px に連動
+
+---
+
+## [0.15.22] — 2026-04-20
+
+### Changed
+- **nav bar の高さを `#tab-bar` と同じ 28px に統一**
+  - v0.15.20〜21 では 32px だったが、mode-youtube-only ↔ overlay を行き来したときに上端の横線位置が 4px ずれて違和感があった
+  - 対応: `#nav-bar { height: 28px }`、ボタンを width/height 28×22 / font-size 14px に縮小、iframe の押し下げ量も 32 → 28px に連動
+
+---
+
+## [0.15.21] — 2026-04-20
+
+### Fixed
+- **`mode-youtube-only` で nav bar が YouTube masthead を覆っていた件を修正**
+  - v0.15.20 で nav bar を z-index 4 で iframe の上に重ねていたため、YouTube 側のヘッダー上端 32px が常に隠れていた
+  - 対応: `body.mode-youtube-only #youtube-iframe` に `top: 32px; height: calc(100% - 32px);` を追加して iframe を nav bar の下に押し下げ
+  - overlay / terminal-only モードでは nav bar が非表示なので iframe は従来通り全画面(`inset: 0`)のまま
+
+---
+
+## [0.15.20] — 2026-04-20
+
+### Added
+- **YouTube 用のブラウザ風ナビバー(戻る / 進む / リロード)を追加**
+  - `mode-youtube-only` のときだけ画面最上部に 32px の nav bar を表示(← / → / ↻)
+  - クリックで各 IPC (`youtube:nav:back` / `:forward` / `:reload`) を発射、main 側が `webFrameMain.executeJavaScript('history.back()')` 等で YouTube iframe の履歴を操作
+  - iframe は cross-origin のため renderer から直接 `contentWindow.history` を叩けない → main 経由の経路を選択
+  - `mode-overlay` / `mode-terminal-only` では表示しない(terminal-root レイアウトとの衝突を避けるため)
+  - reload は既存の `reloadAdBlockAndIframe` パスに相乗り(about:blank → 再設定で SPA 状態を確実にリセット)
+
+---
+
 ## [0.15.19] — 2026-04-20
 
 ### Fixed

@@ -188,6 +188,61 @@ html, body {
 body.mode-youtube-only #terminal-root {
   display: none;
 }
+
+/* In youtube-only mode the nav bar (29px) sits at top: 0, so push the
+   iframe below it. Without this the YouTube masthead is hidden behind
+   the nav bar. Overlay / terminal-only modes keep the full-viewport
+   iframe because the nav bar isn't visible there. */
+body.mode-youtube-only #youtube-iframe {
+  top: 29px;
+  height: calc(100% - 29px);
+}
+
+/* Browser-style YouTube nav bar — only shown in mode-youtube-only, where
+   #terminal-root (and its tab-bar) are hidden. Height is 29px (tab-bar's
+   28px content + 1px border-bottom with box-sizing: content-box default),
+   so the horizontal chrome line stays consistent across modes. */
+#nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 29px;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  background: rgba(0, 0, 0, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  z-index: 4;
+  -webkit-app-region: no-drag;
+  box-sizing: border-box;
+}
+body.mode-youtube-only #nav-bar {
+  display: flex;
+}
+#nav-bar button {
+  background: transparent;
+  border: 0;
+  color: rgb(40, 254, 20);
+  font-family: "Hack Nerd Font Mono", Menlo, monospace;
+  font-size: 14px;
+  width: 28px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+}
+#nav-bar button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+#nav-bar button:active {
+  background: rgba(255, 255, 255, 0.22);
+}
 body.mode-terminal-only #youtube-iframe {
   opacity: 0;
   pointer-events: none;

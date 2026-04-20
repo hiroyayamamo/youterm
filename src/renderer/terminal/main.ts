@@ -100,6 +100,24 @@ async function init(): Promise<void> {
   termArea.id = 'terminal-inner'
   root.appendChild(termArea)
 
+  // YouTube nav bar (back / forward / reload). Appended to body — not to
+  // #terminal-root — because terminal-root is display:none in mode-youtube-only,
+  // which is exactly the mode we want the nav bar visible in. Visibility
+  // toggling lives in CSS (body.mode-youtube-only #nav-bar).
+  const navBar = document.createElement('div')
+  navBar.id = 'nav-bar'
+  const mkNavBtn = (label: string, title: string, onClick: () => void) => {
+    const btn = document.createElement('button')
+    btn.textContent = label
+    btn.title = title
+    btn.addEventListener('click', onClick)
+    return btn
+  }
+  navBar.appendChild(mkNavBtn('←', 'Back', () => window.youtermAPI.youtubeGoBack()))
+  navBar.appendChild(mkNavBtn('→', 'Forward', () => window.youtermAPI.youtubeGoForward()))
+  navBar.appendChild(mkNavBtn('↻', 'Reload', () => window.youtermAPI.youtubeReload()))
+  document.body.appendChild(navBar)
+
   const panel = createOptionsPanel({
     onTransparencyInput: v => window.youtermAPI.settingsSetTransparency(v),
     onBlurInput: v => window.youtermAPI.settingsSetBlur(v),
