@@ -184,6 +184,34 @@ describe('transitionTabs', () => {
     })
   })
 
+  describe('activate-pane', () => {
+    it('switches focus to the other pane', () => {
+      const s = twoPanes(
+        { tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' },
+        { tabs: [{ id: '2', customName: null, cwd: null }], activeId: '2' },
+        0,
+      )
+      const next = transitionTabs(s, { type: 'activate-pane', index: 1 })
+      expect(next.activePaneIndex).toBe(1)
+    })
+
+    it('is a no-op when target index is already active', () => {
+      const s = twoPanes(
+        { tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' },
+        { tabs: [{ id: '2', customName: null, cwd: null }], activeId: '2' },
+        0,
+      )
+      const next = transitionTabs(s, { type: 'activate-pane', index: 0 })
+      expect(next).toBe(s)
+    })
+
+    it('is a no-op when target pane does not exist (not split)', () => {
+      const s = onePane([{ id: '1', customName: null, cwd: null }])
+      const next = transitionTabs(s, { type: 'activate-pane', index: 1 })
+      expect(next).toBe(s)
+    })
+  })
+
   describe('move-tab', () => {
     const threeTabs = (): TabsState => onePane([
       { id: '1', customName: null, cwd: null },

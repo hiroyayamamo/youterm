@@ -9,6 +9,7 @@ export type TabsAction =
   | { type: 'move-tab'; id: string; beforeId: string | null }
   | { type: 'split-panes'; newTabId: string }
   | { type: 'unsplit-panes' }
+  | { type: 'activate-pane'; index: 0 | 1 }
 
 // --- helpers -----------------------------------------------------------
 
@@ -130,6 +131,11 @@ export function transitionTabs(state: TabsState, action: TabsAction): TabsState 
         activePaneIndex: 0,
         splitRatio: state.splitRatio,
       }
+    }
+    case 'activate-pane': {
+      if (action.index < 0 || action.index >= state.panes.length) return state
+      if (state.activePaneIndex === action.index) return state
+      return { ...state, activePaneIndex: action.index }
     }
     case 'move-tab': {
       const fromLoc = locateTab(state, action.id)
