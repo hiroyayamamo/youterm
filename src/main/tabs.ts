@@ -10,6 +10,7 @@ export type TabsAction =
   | { type: 'split-panes'; newTabId: string }
   | { type: 'unsplit-panes' }
   | { type: 'activate-pane'; index: 0 | 1 }
+  | { type: 'set-split-ratio'; ratio: number }
 
 // --- helpers -----------------------------------------------------------
 
@@ -136,6 +137,12 @@ export function transitionTabs(state: TabsState, action: TabsAction): TabsState 
       if (action.index < 0 || action.index >= state.panes.length) return state
       if (state.activePaneIndex === action.index) return state
       return { ...state, activePaneIndex: action.index }
+    }
+    case 'set-split-ratio': {
+      if (state.panes.length !== 2) return state
+      const clamped = Math.max(0.1, Math.min(0.9, action.ratio))
+      if (clamped === state.splitRatio) return state
+      return { ...state, splitRatio: clamped }
     }
     case 'move-tab': {
       const fromLoc = locateTab(state, action.id)

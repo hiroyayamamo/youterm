@@ -212,6 +212,41 @@ describe('transitionTabs', () => {
     })
   })
 
+  describe('set-split-ratio', () => {
+    it('updates the ratio when split', () => {
+      const s = twoPanes(
+        { tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' },
+        { tabs: [{ id: '2', customName: null, cwd: null }], activeId: '2' },
+      )
+      const next = transitionTabs(s, { type: 'set-split-ratio', ratio: 0.4 })
+      expect(next.splitRatio).toBe(0.4)
+    })
+
+    it('clamps values below 0.1', () => {
+      const s = twoPanes(
+        { tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' },
+        { tabs: [{ id: '2', customName: null, cwd: null }], activeId: '2' },
+      )
+      const next = transitionTabs(s, { type: 'set-split-ratio', ratio: 0.05 })
+      expect(next.splitRatio).toBe(0.1)
+    })
+
+    it('clamps values above 0.9', () => {
+      const s = twoPanes(
+        { tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' },
+        { tabs: [{ id: '2', customName: null, cwd: null }], activeId: '2' },
+      )
+      const next = transitionTabs(s, { type: 'set-split-ratio', ratio: 0.99 })
+      expect(next.splitRatio).toBe(0.9)
+    })
+
+    it('is a no-op when not split', () => {
+      const s = onePane([{ id: '1', customName: null, cwd: null }])
+      const next = transitionTabs(s, { type: 'set-split-ratio', ratio: 0.3 })
+      expect(next).toBe(s)
+    })
+  })
+
   describe('move-tab', () => {
     const threeTabs = (): TabsState => onePane([
       { id: '1', customName: null, cwd: null },
