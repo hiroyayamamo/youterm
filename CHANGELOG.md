@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.16.5] — 2026-04-21
+
+### Fixed
+- **splitter ドラッグやウインドウリサイズで非フォーカス pane のテキストが折り返されない問題を修正**
+  - 原因: `refitActive()` がフォーカス中 pane の active タブしか xterm の cols/rows を再計算していなかった。ResizeObserver は両 pane の termArea を監視していたものの、コールバックが片側しか反映しなかった
+  - 対応: `refitActive()` を全 pane ループに変更、各 pane の active タブ 1 つずつ(可視のもののみ)を `fit.fit()` + `ptyResize` する
+  - 結果: 左 pane を狭くしても、フォーカスが右でも、左のテキストが正しく折り返される
+
+---
+
 ## [0.16.4] — 2026-04-21
 
 ### Fixed

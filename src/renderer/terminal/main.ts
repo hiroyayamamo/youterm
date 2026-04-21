@@ -150,15 +150,25 @@ async function init(): Promise<void> {
     paneDOMs.length > 0 &&
     paneDOMs.some(pd => pd.termArea.offsetWidth > 0 && pd.termArea.offsetHeight > 0)
 
+  // Refit every pane's active xterm to its current container size and push
+  // the new cols/rows to the pty. When the splitter is dragged or the
+  // window is resized BOTH panes need this — fitting only the focused
+  // pane left the other one stuck at its previous dimensions and caused
+  // lines to overflow without wrapping.
   const refitActive = () => {
     if (!tabsState) return
-    const activePane = tabsState.panes[tabsState.activePaneIndex]
-    const active = runtimes.get(activePane.activeId)
-    if (!active || !terminalIsVisible()) return
-    try {
-      active.fit.fit()
-      window.youtermAPI.ptyResize(activePane.activeId, { cols: active.term.cols, rows: active.term.rows })
-    } catch {}
+    for (let i = 0; i < tabsState.panes.length; i++) {
+      const pane = tabsState.panes[i]
+      const rt = runtimes.get(pane.activeId)
+      if (!rt) continue
+      const pd = paneDOMs[i]
+      if (!pd) continue
+      if (pd.termArea.offsetWidth === 0 || pd.termArea.offsetHeight === 0) continue
+      try {
+        rt.fit.fit()
+        window.youtermAPI.ptyResize(pane.activeId, { cols: rt.term.cols, rows: rt.term.rows })
+      } catch {}
+    }
   }
 
   const applyActiveVisibility = () => {
