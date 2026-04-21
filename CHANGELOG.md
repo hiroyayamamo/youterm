@@ -2,6 +2,16 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.16.3] — 2026-04-21
+
+### Fixed
+- **v0.16.2 の pane-wide drop zone が機能していない環境があった問題に対処**
+  - 原因候補: xterm の内部 DOM(renderer layers / textarea)や先行する listener が drop を消費してしまい、pane container まで到達しないケース
+  - 対応: pane の `dragover` / `drop` / `dragleave` を **capture phase** に変更。xterm 等の子要素より先に pane がイベントを捕捉し、`stopPropagation` で下流に渡さない
+  - 視覚フィードバックを強化: アウトライン 2px→3px、さらに半透明 cyan のオーバーレイ(`rgba(0,221,255,0.08)`)を pane 全体に重ねて、drop zone が active なのを明確に
+
+---
+
 ## [0.16.2] — 2026-04-21
 
 ### Changed
