@@ -50,6 +50,23 @@ export function createMainWindow(): WindowBundle {
         )
         continue
       }
+      if (lower === 'set-cookie') {
+        // Force SameSite=None; Secure on every YouTube-origin cookie so
+        // writes attempted from the iframe aren't dropped by the browser's
+        // default Lax / third-party cookie rules. Without this, clicking
+        // "Dark theme" in the account menu looks like it failed — the
+        // PREF cookie is set in the response but the browser discards it
+        // because the Set-Cookie header was SameSite=Lax and the request
+        // was cross-site to the top-level file:// origin.
+        const v = Array.isArray(h[k]) ? h[k] : [h[k] as unknown as string]
+        newHeaders[k] = (v as string[]).map(cookie => {
+          let c = cookie.replace(/;\s*samesite=[^;]*/gi, '')
+          c += '; SameSite=None'
+          if (!/;\s*secure\b/i.test(c)) c += '; Secure'
+          return c
+        })
+        continue
+      }
       newHeaders[k] = h[k] as string[]
     }
     callback({ responseHeaders: newHeaders })

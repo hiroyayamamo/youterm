@@ -63,9 +63,22 @@ Electron 41 · TypeScript · Vite (`electron-vite`) · xterm.js · node-pty · e
 
 ## Known Limitations
 
-**Resize-induced scrollback duplication in some TUIs.** When you drag the splitter or resize the window, youterm sends a `SIGWINCH` to the shell's child processes so they reflow to the new size. TUIs that re-render their entire view on `SIGWINCH` — Claude Code is a notable example — write a copy of their current banner / prompt / last response into the scrollback on every redraw, so you may see a duplicated block above your active line after each resize.
+### Resize-induced scrollback duplication in some TUIs
+
+When you drag the splitter or resize the window, youterm sends a `SIGWINCH` to the shell's child processes so they reflow to the new size. TUIs that re-render their entire view on `SIGWINCH` — Claude Code is a notable example — write a copy of their current banner / prompt / last response into the scrollback on every redraw, so you may see a duplicated block above your active line after each resize.
 
 youterm coalesces resize events so the child receives **at most one `SIGWINCH` per drag** (same-size no-ops are suppressed entirely), but the redraw itself is the TUI's behavior and can't be fully eliminated from the outside. Your active prompt and anything you type after the resize is unaffected.
+
+### Some JS-driven YouTube settings don't persist
+
+YouTube is embedded as an `<iframe>` whose top-level origin is youterm's local app page (`file://`). Chromium applies strict third-party storage / cookie rules to that configuration, and YouTube's account-menu save flows (theme, language, autoplay preference, comments, like / subscribe, etc.) expect a first-party top-level context for authentication. Cookie writes attempted from the iframe are silently dropped or YouTube's internal API rejects the request, so:
+
+- **Working**: video playback, search, URL navigation (channel links, video clicks), the browser-style back / forward / reload toolbar
+- **Not working**: changing display theme from the avatar menu, changing display language, posting comments, like / subscribe buttons, anything that needs a YouTube-side API write
+
+Workarounds: use macOS's OS-level dark mode (YouTube follows the system appearance), or run YouTube's language URL parameter (`?hl=ja` etc.) via the address bar.
+
+Lifting this would require re-architecting YouTube out of the iframe into a top-level `WebContentsView`. Not currently planned — the tradeoff against the simpler single-webContents layout isn't worth it for a personal tool.
 
 ## License
 
@@ -105,9 +118,24 @@ open release/mac-arm64/youterm.app
 
 ### 既知の制限
 
-**リサイズ時に一部 TUI のスクロールバックが重複することがある。** splitter や window をリサイズするとき、youterm はシェルの子プロセスに `SIGWINCH` を送って新しいサイズに追従させます。`SIGWINCH` を受けるたびに表示全体を再描画する TUI(Claude Code など)は、その時点の banner / prompt / 直前の応答を 1 コピー分スクロールバックに書き出すため、**リサイズのたびに見返し領域に重複ブロックが残る**ことがあります。
+#### リサイズ時に一部 TUI のスクロールバックが重複することがある
+
+splitter や window をリサイズするとき、youterm はシェルの子プロセスに `SIGWINCH` を送って新しいサイズに追従させます。`SIGWINCH` を受けるたびに表示全体を再描画する TUI(Claude Code など)は、その時点の banner / prompt / 直前の応答を 1 コピー分スクロールバックに書き出すため、**リサイズのたびに見返し領域に重複ブロックが残る**ことがあります。
 
 youterm はリサイズイベントを集約して **1 ドラッグあたり最大 1 回の `SIGWINCH`** に抑えています(同サイズの re-send は完全にスキップ)が、その 1 回の再描画は TUI 側の挙動なので外側から完全には消せません。アクティブなプロンプトやリサイズ後に入力する内容には影響しません。
+
+#### YouTube のアカウントメニューの一部機能が保存されない
+
+YouTube は `<iframe>` で埋め込んでおり、その top-level 原点は youterm のローカル HTML(`file://`)。Chromium がこの構成を strict な third-party storage / cookie として扱うため、YouTube のアカウントメニューからの保存系フロー(テーマ、言語、コメント投稿、like / 購読 等)は失敗します。
+
+- **動くもの**: 動画再生、検索、URL 遷移(チャンネルリンク、動画クリック)、進む / 戻る / リロード
+- **動かないもの**: アバターメニューからのテーマ切替、言語切替、コメント投稿、like / 購読、YouTube 側の API 書込が必要な操作
+
+回避策:
+- macOS の OS ダークモードを切替(YouTube は OS の appearance に追従する)
+- 言語は URL パラメータ(`?hl=ja` 等)で指定
+
+この制限を外すには YouTube を iframe から切り出して top-level の `WebContentsView` にする re-architecture が必要。個人ツールとしては軽量な単一 webContents 構造の利点のほうが大きいので、現状では実施しない方針。
 
 ### ライセンス
 

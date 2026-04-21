@@ -8,8 +8,25 @@ import { installShortcuts } from './shortcuts'
 
 // Disable Chromium third-party storage partitioning so the YouTube iframe shares
 // cookies/localStorage with the session jar. Required for YouTube preferences
-// (dark mode, theater mode, PREF cookie) to persist across app restarts.
-app.commandLine.appendSwitch('disable-features', 'ThirdPartyStoragePartitioning,PartitionedCookies')
+// (dark mode, theater mode, PREF cookie) to persist across app restarts AND to
+// be writable from the iframe in the first place. The full list covers several
+// names Chromium has used for this behavior across versions — spraying them all
+// is safe since unknown feature names are ignored.
+app.commandLine.appendSwitch(
+  'disable-features',
+  [
+    'ThirdPartyStoragePartitioning',
+    'PartitionedCookies',
+    'ClientHintsAllowThirdPartyDelegation',
+    'BlockThirdPartyCookies',
+    'TrackingProtection3pcd',
+    'ThirdPartyCookieDeprecation',
+    // SameSite defaults otherwise treat unspecified cookies as Lax,
+    // which drops Set-Cookie writes attempted from an iframe context.
+    'SameSiteByDefaultCookies',
+    'CookiesWithoutSameSiteMustBeSecure',
+  ].join(','),
+)
 
 let bundle: ReturnType<typeof createMainWindow> | undefined
 let tabsBridge: TabsBridge | undefined
