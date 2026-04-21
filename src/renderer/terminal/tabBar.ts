@@ -1,4 +1,4 @@
-import type { TabsState } from '../../shared/types'
+import type { Tab } from '../../shared/types'
 
 export interface TabBarCallbacks {
   onNewTab(): void
@@ -7,26 +7,37 @@ export interface TabBarCallbacks {
   onContextMenu(tabId: string, x: number, y: number): void
   onRenameCommit(tabId: string, name: string | null): void
   onMove(tabId: string, beforeTabId: string | null): void
+  onMoveAcross(tabId: string, beforeTabId: string | null): void
+  onPaneActivate(): void
 }
 
 export interface TabBarHandle {
-  render(state: TabsState): void
+  render(pane: { tabs: Tab[]; activeId: string }): void
   startRename(tabId: string): void
+  setActive(active: boolean): void
 }
 
-export function createTabBar(container: HTMLElement, cb: TabBarCallbacks): TabBarHandle {
+export function createTabBar(
+  container: HTMLElement,
+  paneIndex: 0 | 1,
+  cb: TabBarCallbacks,
+): TabBarHandle {
   const list = document.createElement('div')
-  list.id = 'tab-list'
+  list.className = 'tab-list'
   container.appendChild(list)
 
   const newBtn = document.createElement('button')
-  newBtn.id = 'tab-new'
+  newBtn.className = 'tab-new'
   newBtn.textContent = '+'
   newBtn.setAttribute('aria-label', 'New tab')
   newBtn.addEventListener('click', e => { e.stopPropagation(); cb.onNewTab() })
   container.appendChild(newBtn)
 
-  let currentState: TabsState | null = null
+  // Mousedown on the container activates this pane (capture phase so it fires
+  // before any child handlers).
+  container.addEventListener('mousedown', () => cb.onPaneActivate(), true)
+
+  let currentPane: { tabs: Tab[]; activeId: string } | null = null
   let renamingTabId: string | null = null
   let draggingTabId: string | null = null
 
@@ -43,14 +54,14 @@ export function createTabBar(container: HTMLElement, cb: TabBarCallbacks): TabBa
     cb.onRenameCommit(tabId, value && value.trim() !== '' ? value : null)
   }
 
-  const render = (state: TabsState) => {
-    currentState = state
+  const render = (pane: { tabs: Tab[]; activeId: string }) => {
+    currentPane = pane
     list.innerHTML = ''
-    for (const tab of state.tabs) {
+    for (const tab of pane.tabs) {
       const tabEl = document.createElement('div')
       tabEl.className = 'tab'
       tabEl.dataset.tabId = tab.id
-      if (tab.id === state.activeId) tabEl.classList.add('is-active')
+      if (tab.id === pane.activeId) tabEl.classList.add('is-active')
 
       if (renamingTabId === tab.id) {
         const input = document.createElement('input')
@@ -62,17 +73,17 @@ export function createTabBar(container: HTMLElement, cb: TabBarCallbacks): TabBa
           if (e.key === 'Enter') {
             e.preventDefault()
             finishRename(tab.id, input.value)
-            if (currentState) render(currentState)
+            if (currentPane) render(currentPane)
           } else if (e.key === 'Escape') {
             e.preventDefault()
             renamingTabId = null
-            if (currentState) render(currentState)
+            if (currentPane) render(currentPane)
           }
         })
         input.addEventListener('blur', () => {
           if (renamingTabId === tab.id) {
             finishRename(tab.id, input.value)
-            if (currentState) render(currentState)
+            if (currentPane) render(currentPane)
           }
         })
         input.addEventListener('click', e => e.stopPropagation())
@@ -98,7 +109,7 @@ export function createTabBar(container: HTMLElement, cb: TabBarCallbacks): TabBa
         })
         tabEl.addEventListener('dblclick', () => {
           renamingTabId = tab.id
-          if (currentState) render(currentState)
+          if (currentPane) render(currentPane)
         })
 
         // Drag-and-drop reordering. Only attach when the tab is NOT in
@@ -112,6 +123,9 @@ export function createTabBar(container: HTMLElement, cb: TabBarCallbacks): TabBa
             e.dataTransfer.effectAllowed = 'move'
             // Must set data or Firefox won't start the drag.
             e.dataTransfer.setData('text/plain', tab.id)
+            // Also record which pane this drag originated from so cross-pane
+            // drops can be detected in the drop handler.
+            e.dataTransfer.setData('application/x-youterm-pane', String(paneIndex))
           }
         })
         tabEl.addEventListener('dragend', () => {
@@ -120,7 +134,8 @@ export function createTabBar(container: HTMLElement, cb: TabBarCallbacks): TabBa
           clearDropMarkers()
         })
         tabEl.addEventListener('dragover', e => {
-          if (!draggingTabId || draggingTabId === tab.id) return
+          if (!draggingTabId && !e.dataTransfer?.getData('text/plain')) return
+          // Allow drop from any pane; just prevent the default to allow it.
           e.preventDefault()
           if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
           // Split the hovered tab horizontally at its midpoint to decide
@@ -138,7 +153,11 @@ export function createTabBar(container: HTMLElement, cb: TabBarCallbacks): TabBa
           }
         })
         tabEl.addEventListener('drop', e => {
-          if (!draggingTabId || draggingTabId === tab.id) return
+          const sourceTabId = e.dataTransfer?.getData('text/plain') ?? draggingTabId
+          const sourcePaneStr = e.dataTransfer?.getData('application/x-youterm-pane') ?? ''
+          const sourcePaneIdx = sourcePaneStr === '' ? paneIndex : Number(sourcePaneStr) as 0 | 1
+          if (!sourceTabId) return
+          if (sourceTabId === tab.id && sourcePaneIdx === paneIndex) return
           e.preventDefault()
           e.stopPropagation()
           const rect = tabEl.getBoundingClientRect()
@@ -150,14 +169,17 @@ export function createTabBar(container: HTMLElement, cb: TabBarCallbacks): TabBa
           if (isBefore) {
             beforeId = tab.id
           } else {
-            const tabs = currentState?.tabs ?? []
+            const tabs = currentPane?.tabs ?? []
             const idx = tabs.findIndex(t => t.id === tab.id)
             beforeId = idx >= 0 && idx + 1 < tabs.length ? tabs[idx + 1].id : null
           }
-          const dragged = draggingTabId
           draggingTabId = null
           clearDropMarkers()
-          cb.onMove(dragged, beforeId)
+          if (sourcePaneIdx === paneIndex) {
+            cb.onMove(sourceTabId, beforeId)
+          } else {
+            cb.onMoveAcross(sourceTabId, beforeId)
+          }
         })
       }
 
@@ -167,8 +189,12 @@ export function createTabBar(container: HTMLElement, cb: TabBarCallbacks): TabBa
 
   const startRename = (tabId: string) => {
     renamingTabId = tabId
-    if (currentState) render(currentState)
+    if (currentPane) render(currentPane)
   }
 
-  return { render, startRename }
+  const setActive = (active: boolean) => {
+    container.classList.toggle('is-pane-active', active)
+  }
+
+  return { render, startRename, setActive }
 }
