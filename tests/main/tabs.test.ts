@@ -155,6 +155,35 @@ describe('transitionTabs', () => {
     })
   })
 
+  describe('unsplit-panes', () => {
+    it('concatenates right tabs to the end of left pane', () => {
+      const s = twoPanes(
+        { tabs: [{ id: '1', customName: null, cwd: null }, { id: '2', customName: null, cwd: null }], activeId: '2' },
+        { tabs: [{ id: '3', customName: null, cwd: null }], activeId: '3' },
+      )
+      const next = transitionTabs(s, { type: 'unsplit-panes' })
+      expect(next.panes).toHaveLength(1)
+      expect(next.panes[0].tabs.map(t => t.id)).toEqual(['1', '2', '3'])
+    })
+
+    it('preserves activeId from the focused pane', () => {
+      const s = twoPanes(
+        { tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' },
+        { tabs: [{ id: '2', customName: null, cwd: null }], activeId: '2' },
+        1,
+      )
+      const next = transitionTabs(s, { type: 'unsplit-panes' })
+      expect(next.panes[0].activeId).toBe('2')
+      expect(next.activePaneIndex).toBe(0)
+    })
+
+    it('is a no-op when not split', () => {
+      const s = onePane([{ id: '1', customName: null, cwd: null }])
+      const next = transitionTabs(s, { type: 'unsplit-panes' })
+      expect(next).toBe(s)
+    })
+  })
+
   describe('move-tab', () => {
     const threeTabs = (): TabsState => onePane([
       { id: '1', customName: null, cwd: null },

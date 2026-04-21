@@ -8,6 +8,7 @@ export type TabsAction =
   | { type: 'set-tab-cwds'; cwds: Record<string, string> }
   | { type: 'move-tab'; id: string; beforeId: string | null }
   | { type: 'split-panes'; newTabId: string }
+  | { type: 'unsplit-panes' }
 
 // --- helpers -----------------------------------------------------------
 
@@ -114,6 +115,19 @@ export function transitionTabs(state: TabsState, action: TabsAction): TabsState 
       return {
         panes: [state.panes[0], newPane],
         activePaneIndex: 1,
+        splitRatio: state.splitRatio,
+      }
+    }
+    case 'unsplit-panes': {
+      if (state.panes.length !== 2) return state
+      const focused = state.panes[state.activePaneIndex]
+      const merged: Pane = {
+        tabs: [...state.panes[0].tabs, ...state.panes[1].tabs],
+        activeId: focused.activeId,
+      }
+      return {
+        panes: [merged],
+        activePaneIndex: 0,
         splitRatio: state.splitRatio,
       }
     }
