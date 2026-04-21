@@ -2,6 +2,19 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.16.4] — 2026-04-21
+
+### Fixed
+- **タブ DnD の drop zone を pane 全体に統一、ドラッグ終了後の残留 cyan を解消**
+  - タブバー空白エリアへのドロップ視覚が pane 全体の cyan 表示と分離していて紛らわしかった + タブバーの `is-drop-target` クラスがドラッグ終了後も残ることがあった
+  - 対応:
+    - タブバーコンテナ用の `dragover`/`drop`/`dragleave` を削除。pane 側のハンドラがタブバー空白を含めて全領域をカバーするようにした
+    - pane のガード条件を `.tab-bar` → `.tab` に変更。個別タブ以外(= タブバー空白 + ターミナル領域 + 端)は全部 pane 末尾追加として統一挙動
+    - ドラッグ元 `.tab` の `dragend` で、document 全体の `.is-drop-target` / `.is-drop-target-pane` を一括クリア。これで drop 成功・キャンセル問わず残留視覚なし
+  - 結果: 「タブの真上じゃなければどこでも pane 末尾に落ちる」という一貫した動作、視覚は pane 全体が cyan で光る単一パターン
+
+---
+
 ## [0.16.3] — 2026-04-21
 
 ### Fixed

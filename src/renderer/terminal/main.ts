@@ -299,17 +299,17 @@ async function init(): Promise<void> {
       window.youtermAPI.panesActivate(paneIndex)
     }, true)
 
-    // Pane-wide drop zone. Dropping a tab anywhere in this pane — including
-    // the terminal area, the splitter's edge, etc. — appends it to the end
-    // of the pane. Listeners are on the capture phase so they intercept
-    // BEFORE any child (xterm internals in particular) can process or
-    // stopPropagation the drop. The tab-bar and individual tabs keep their
-    // own precise drop handlers for before/after placement; we defer to
-    // them via .closest('.tab-bar') when the cursor is over the bar.
+    // Pane-wide drop zone. Dropping a tab anywhere in this pane — the tab-
+    // bar empty area, the terminal area, the splitter's edge, etc. —
+    // appends the moved tab at the end of the pane. The per-tab listeners
+    // still handle precise before/after insertion; we defer to them only
+    // when the cursor is over an actual .tab element (not just the tab-
+    // bar). Capture phase ensures we intercept before any child (xterm
+    // internals in particular) can consume the event.
     container.addEventListener('dragover', e => {
       if (!e.dataTransfer?.types.includes('text/plain')) return
       const target = e.target as Element | null
-      if (target?.closest('.tab-bar')) return
+      if (target?.closest('.tab')) return
       e.preventDefault()
       e.stopPropagation()
       e.dataTransfer.dropEffect = 'move'
@@ -323,7 +323,7 @@ async function init(): Promise<void> {
     container.addEventListener('drop', e => {
       container.classList.remove('is-drop-target-pane')
       const target = e.target as Element | null
-      if (target?.closest('.tab-bar')) return
+      if (target?.closest('.tab')) return
       const sourceTabId = e.dataTransfer?.getData('text/plain')
       if (!sourceTabId) return
       const sourcePaneStr = e.dataTransfer?.getData('application/x-youterm-pane') ?? ''

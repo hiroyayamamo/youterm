@@ -132,6 +132,12 @@ export function createTabBar(
           draggingTabId = null
           tabEl.classList.remove('is-dragging')
           clearDropMarkers()
+          // Global cleanup: dragend reliably fires on the source regardless of
+          // where (or whether) the drop lands, so this is the safest hook for
+          // clearing residual drop-target highlights across every pane.
+          document.querySelectorAll('.is-drop-target, .is-drop-target-pane').forEach(el => {
+            el.classList.remove('is-drop-target', 'is-drop-target-pane')
+          })
         })
         tabEl.addEventListener('dragover', e => {
           // During dragover, dataTransfer.getData() returns '' for security
@@ -193,36 +199,10 @@ export function createTabBar(
     }
   }
 
-  container.addEventListener('dragover', e => {
-    // Highlight the tab-bar as a drop target whenever a drag is over it.
-    // Same-pane drops still work correctly; highlight is purely visual.
-    container.classList.add('is-drop-target')
-    e.preventDefault()
-  })
-  container.addEventListener('dragleave', e => {
-    if (!container.contains(e.relatedTarget as Node | null)) {
-      container.classList.remove('is-drop-target')
-    }
-  })
-  container.addEventListener('drop', e => {
-    container.classList.remove('is-drop-target')
-    // If the drop didn't land on any specific tab (i.e. the event target is
-    // the tab-bar container or the tab-list wrapper, not a .tab), treat it
-    // as "append to the end".
-    const targetEl = e.target as Element | null
-    const landedOnTab = targetEl?.closest('.tab')
-    if (landedOnTab) return  // per-tab drop handlers handle this case
-    const sourceTabId = e.dataTransfer?.getData('text/plain') ?? ''
-    if (!sourceTabId) return
-    const sourcePaneStr = e.dataTransfer?.getData('application/x-youterm-pane') ?? ''
-    const sourcePaneIdx = sourcePaneStr === '' ? paneIndex : Number(sourcePaneStr) as 0 | 1
-    e.preventDefault()
-    if (sourcePaneIdx === paneIndex) {
-      cb.onMove(sourceTabId, null)
-    } else {
-      cb.onMoveAcross(sourceTabId, null)
-    }
-  })
+  // Note: tab-bar-level dragover/drop were removed in v0.16.4 — the pane-
+  // level handlers (in main.ts buildPaneDOM) cover the entire pane,
+  // including the tab-bar empty area. Individual .tab elements still
+  // handle their own precise-insert drops via stopPropagation.
 
   const startRename = (tabId: string) => {
     renamingTabId = tabId
