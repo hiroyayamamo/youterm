@@ -134,10 +134,16 @@ export function createTabBar(
           clearDropMarkers()
         })
         tabEl.addEventListener('dragover', e => {
-          if (!draggingTabId && !e.dataTransfer?.getData('text/plain')) return
-          // Allow drop from any pane; just prevent the default to allow it.
+          // During dragover, dataTransfer.getData() returns '' for security
+          // reasons (values are only readable on drop). Types are readable
+          // though, so we use the presence of 'text/plain' as a signal that
+          // this is a youterm tab drag rather than an unrelated drop. This
+          // also lets cross-pane drags through — draggingTabId is a closure
+          // variable local to each tabBar instance and is null in the target
+          // pane.
+          if (!e.dataTransfer?.types.includes('text/plain')) return
           e.preventDefault()
-          if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+          e.dataTransfer.dropEffect = 'move'
           // Split the hovered tab horizontally at its midpoint to decide
           // whether the drop would land before or after it.
           const rect = tabEl.getBoundingClientRect()
