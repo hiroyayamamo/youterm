@@ -240,6 +240,29 @@ export async function attachTabs(
     if (beforeTabId !== null && typeof beforeTabId !== 'string') return
     tabsController.moveTab(tabId, beforeTabId)
   }
+  const onMoveAcross = (_e: unknown, arg: unknown) => {
+    if (typeof arg !== 'object' || !arg) return
+    const { tabId, paneIndex, beforeTabId } = arg as {
+      tabId: string; paneIndex: 0 | 1; beforeTabId: string | null
+    }
+    if (typeof tabId !== 'string') return
+    if (paneIndex !== 0 && paneIndex !== 1) return
+    if (beforeTabId !== null && typeof beforeTabId !== 'string') return
+    tabsController.moveTabToPane(tabId, paneIndex, beforeTabId)
+  }
+  const onPanesToggleSplit = () => { tabsController.toggleSplit() }
+  const onPanesActivate = (_e: unknown, arg: unknown) => {
+    if (typeof arg !== 'object' || !arg) return
+    const { index } = arg as { index: 0 | 1 }
+    if (index !== 0 && index !== 1) return
+    tabsController.activatePane(index)
+  }
+  const onPanesSetRatio = (_e: unknown, arg: unknown) => {
+    if (typeof arg !== 'object' || !arg) return
+    const { ratio } = arg as { ratio: number }
+    if (typeof ratio !== 'number' || !Number.isFinite(ratio)) return
+    tabsController.setSplitRatio(ratio)
+  }
   const onWrite = (_e: unknown, arg: unknown) => {
     if (typeof arg !== 'object' || !arg) return
     const { tabId, data } = arg as { tabId: string; data: string }
@@ -285,6 +308,10 @@ export async function attachTabs(
   ipcMain.on('tabs:activate', onActivate)
   ipcMain.on('tabs:rename', onRename)
   ipcMain.on('tabs:move', onMove)
+  ipcMain.on('tabs:move-across', onMoveAcross)
+  ipcMain.on('panes:toggle-split', onPanesToggleSplit)
+  ipcMain.on('panes:activate', onPanesActivate)
+  ipcMain.on('panes:set-ratio', onPanesSetRatio)
   ipcMain.on('pty:write', onWrite)
   ipcMain.on('pty:resize', onResize)
   ipcMain.on('tabs:context-menu', onContextMenu)
@@ -305,6 +332,10 @@ export async function attachTabs(
       ipcMain.removeListener('tabs:activate', onActivate)
       ipcMain.removeListener('tabs:rename', onRename)
       ipcMain.removeListener('tabs:move', onMove)
+      ipcMain.removeListener('tabs:move-across', onMoveAcross)
+      ipcMain.removeListener('panes:toggle-split', onPanesToggleSplit)
+      ipcMain.removeListener('panes:activate', onPanesActivate)
+      ipcMain.removeListener('panes:set-ratio', onPanesSetRatio)
       ipcMain.removeListener('pty:write', onWrite)
       ipcMain.removeListener('pty:resize', onResize)
       ipcMain.removeListener('tabs:context-menu', onContextMenu)
