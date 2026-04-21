@@ -30,15 +30,22 @@ export function installShortcuts(
 
   const cycleTab = (direction: 1 | -1) => {
     const s = tabs.getState()
-    const idx = s.tabs.findIndex(t => t.id === s.activeId)
+    // Cycle within the focused pane only — per-pane cycling is the
+    // expected behaviour in a split view (Cmd+Option+Left/Right stays
+    // inside the pane you're working in).
+    const pane = s.panes[s.activePaneIndex]
+    if (!pane) return
+    const idx = pane.tabs.findIndex(t => t.id === pane.activeId)
     if (idx < 0) return
-    const next = (idx + direction + s.tabs.length) % s.tabs.length
-    tabs.activateTab(s.tabs[next].id)
+    const next = (idx + direction + pane.tabs.length) % pane.tabs.length
+    tabs.activateTab(pane.tabs[next].id)
   }
 
   const closeActiveTab = async () => {
     const s = tabs.getState()
-    const result = await tabs.closeTab(s.activeId)
+    const pane = s.panes[s.activePaneIndex]
+    if (!pane) return
+    const result = await tabs.closeTab(pane.activeId)
     if (result === 'close-window') bundle.win.close()
   }
 
