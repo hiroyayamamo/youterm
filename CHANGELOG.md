@@ -2,6 +2,20 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.16.2] — 2026-04-21
+
+### Changed
+- **タブの DnD 着地先を pane 全体に拡張**
+  - これまで: 着地可能な領域はタブバー(高さ 29px)のみ。外すと何も起きなかった
+  - 今: pane のどこに落としても「その pane の末尾に追加」として扱われる
+    - タブの上(左半分 / 右半分)→ 既存通り精密挿入
+    - タブバーの空白 → 既存通り末尾追加
+    - **ターミナル領域 / splitter 近傍 / pane 端 → pane 末尾に追加** 🆕
+  - ドラッグ中の視覚フィードバック: タブバー上は既存の cyan 枠、タブバー外に出ると pane 全体に薄い cyan のアウトライン
+  - 実装: `.pane` container に `dragover` / `drop` ハンドラ追加。タブやタブバーに着地した場合は既存ハンドラに委譲(`.closest('.tab-bar')` チェック)
+
+---
+
 ## [0.16.1] — 2026-04-21
 
 ### Security

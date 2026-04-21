@@ -299,6 +299,42 @@ async function init(): Promise<void> {
       window.youtermAPI.panesActivate(paneIndex)
     }, true)
 
+    // Pane-wide drop zone. Dropping a tab anywhere in this pane — including
+    // the terminal area, the splitter's edge, etc. — appends it to the end
+    // of the pane. The tab-bar and individual tabs keep their own precise
+    // drop handlers for before/after placement; this only fires when the
+    // drop lands outside the tab-bar (checked via .closest('.tab-bar')).
+    container.addEventListener('dragover', e => {
+      if (!e.dataTransfer?.types.includes('text/plain')) return
+      const target = e.target as Element | null
+      if (target?.closest('.tab-bar')) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      container.classList.add('is-drop-target-pane')
+    })
+    container.addEventListener('dragleave', e => {
+      if (!container.contains(e.relatedTarget as Node | null)) {
+        container.classList.remove('is-drop-target-pane')
+      }
+    })
+    container.addEventListener('drop', e => {
+      container.classList.remove('is-drop-target-pane')
+      const target = e.target as Element | null
+      // Already handled by tab or tab-bar listeners.
+      if (target?.closest('.tab-bar')) return
+      const sourceTabId = e.dataTransfer?.getData('text/plain')
+      if (!sourceTabId) return
+      const sourcePaneStr = e.dataTransfer?.getData('application/x-youterm-pane') ?? ''
+      const sourcePaneIdx = sourcePaneStr === '' ? paneIndex : Number(sourcePaneStr) as 0 | 1
+      e.preventDefault()
+      e.stopPropagation()
+      if (sourcePaneIdx === paneIndex) {
+        window.youtermAPI.tabsMove(sourceTabId, null)
+      } else {
+        window.youtermAPI.tabsMoveAcross(sourceTabId, paneIndex, null)
+      }
+    })
+
     return { container, tabBarEl, termArea, tabBar }
   }
 
