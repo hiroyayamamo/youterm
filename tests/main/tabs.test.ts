@@ -150,4 +150,55 @@ describe('transitionTabs', () => {
       expect(next).toBe(s)
     })
   })
+
+  describe('move-tab', () => {
+    const threeTabs = (): TabsState => ({
+      tabs: [
+        { id: '1', customName: null, cwd: null },
+        { id: '2', customName: null, cwd: null },
+        { id: '3', customName: null, cwd: null },
+      ],
+      activeId: '1',
+    })
+
+    it('moves a tab before another tab', () => {
+      const next = transitionTabs(threeTabs(), { type: 'move-tab', id: '3', beforeId: '1' })
+      expect(next.tabs.map(t => t.id)).toEqual(['3', '1', '2'])
+    })
+
+    it('moves a tab to the end when beforeId is null', () => {
+      const next = transitionTabs(threeTabs(), { type: 'move-tab', id: '1', beforeId: null })
+      expect(next.tabs.map(t => t.id)).toEqual(['2', '3', '1'])
+    })
+
+    it('preserves activeId when reordering', () => {
+      const next = transitionTabs(threeTabs(), { type: 'move-tab', id: '3', beforeId: '1' })
+      expect(next.activeId).toBe('1')
+    })
+
+    it('is a no-op when dropping a tab before itself', () => {
+      const s = threeTabs()
+      const next = transitionTabs(s, { type: 'move-tab', id: '2', beforeId: '2' })
+      expect(next).toBe(s)
+    })
+
+    it('is a no-op when the resulting order is unchanged', () => {
+      const s = threeTabs()
+      // Moving tab 1 before tab 2 — tab 1 is already before tab 2.
+      const next = transitionTabs(s, { type: 'move-tab', id: '1', beforeId: '2' })
+      expect(next).toBe(s)
+    })
+
+    it('returns the same reference when the dragged id does not exist', () => {
+      const s = threeTabs()
+      const next = transitionTabs(s, { type: 'move-tab', id: 'does-not-exist', beforeId: '1' })
+      expect(next).toBe(s)
+    })
+
+    it('returns the same reference when the beforeId does not exist', () => {
+      const s = threeTabs()
+      const next = transitionTabs(s, { type: 'move-tab', id: '1', beforeId: 'does-not-exist' })
+      expect(next).toBe(s)
+    })
+  })
 })

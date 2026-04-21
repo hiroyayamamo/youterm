@@ -215,6 +215,7 @@ async function init(): Promise<void> {
     onClose: id => window.youtermAPI.tabsClose(id),
     onContextMenu: (id, x, y) => window.youtermAPI.tabsContextMenu(id, x, y),
     onRenameCommit: (id, name) => window.youtermAPI.tabsRename(id, name),
+    onMove: (id, beforeId) => window.youtermAPI.tabsMove(id, beforeId),
   })
 
   window.youtermAPI.onPtyData(({ tabId, data }) => {

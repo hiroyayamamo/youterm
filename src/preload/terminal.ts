@@ -94,6 +94,7 @@ contextBridge.exposeInMainWorld('youtermAPI', {
   tabsClose(tabId: string) { ipcRenderer.send('tabs:close', { tabId }) },
   tabsActivate(tabId: string) { ipcRenderer.send('tabs:activate', { tabId }) },
   tabsRename(tabId: string, name: string | null) { ipcRenderer.send('tabs:rename', { tabId, name }) },
+  tabsMove(tabId: string, beforeTabId: string | null) { ipcRenderer.send('tabs:move', { tabId, beforeTabId }) },
   tabsContextMenu(tabId: string, x: number, y: number) { ipcRenderer.send('tabs:context-menu', { tabId, x, y }) },
 
   terminalRuntimeReady(tabId: string) { ipcRenderer.send('terminal:runtime-ready', tabId) },

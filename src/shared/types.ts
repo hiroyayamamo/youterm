@@ -32,6 +32,7 @@ export interface YoutermAPI {
   tabsClose(tabId: string): void
   tabsActivate(tabId: string): void
   tabsRename(tabId: string, name: string | null): void
+  tabsMove(tabId: string, beforeTabId: string | null): void
   tabsContextMenu(tabId: string, x: number, y: number): void
   terminalRuntimeReady(tabId: string): void
 }

@@ -233,6 +233,13 @@ export async function attachTabs(
     const cleaned = typeof name === 'string' && name.trim() === '' ? null : name
     tabsController.renameTab(tabId, cleaned)
   }
+  const onMove = (_e: unknown, arg: unknown) => {
+    if (typeof arg !== 'object' || !arg) return
+    const { tabId, beforeTabId } = arg as { tabId: string; beforeTabId: string | null }
+    if (typeof tabId !== 'string') return
+    if (beforeTabId !== null && typeof beforeTabId !== 'string') return
+    tabsController.moveTab(tabId, beforeTabId)
+  }
   const onWrite = (_e: unknown, arg: unknown) => {
     if (typeof arg !== 'object' || !arg) return
     const { tabId, data } = arg as { tabId: string; data: string }
@@ -277,6 +284,7 @@ export async function attachTabs(
   ipcMain.on('tabs:close', onClose)
   ipcMain.on('tabs:activate', onActivate)
   ipcMain.on('tabs:rename', onRename)
+  ipcMain.on('tabs:move', onMove)
   ipcMain.on('pty:write', onWrite)
   ipcMain.on('pty:resize', onResize)
   ipcMain.on('tabs:context-menu', onContextMenu)
@@ -296,6 +304,7 @@ export async function attachTabs(
       ipcMain.removeListener('tabs:close', onClose)
       ipcMain.removeListener('tabs:activate', onActivate)
       ipcMain.removeListener('tabs:rename', onRename)
+      ipcMain.removeListener('tabs:move', onMove)
       ipcMain.removeListener('pty:write', onWrite)
       ipcMain.removeListener('pty:resize', onResize)
       ipcMain.removeListener('tabs:context-menu', onContextMenu)

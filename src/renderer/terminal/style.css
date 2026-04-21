@@ -303,6 +303,21 @@ body.mode-overlay #youtube-iframe {
   color: rgb(40, 254, 20);
   border-bottom: 2px solid rgb(40, 254, 20);
 }
+
+/* Drag-and-drop reordering. The dragged tab fades to 30% so its original
+   slot stays visible; .drop-before / .drop-after paints a 2px cyan line
+   on the appropriate side of the hovered target to show where the drop
+   will insert. Uses box-shadow instead of border so nothing shifts the
+   layout. */
+.tab.is-dragging {
+  opacity: 0.3;
+}
+.tab.drop-before {
+  box-shadow: inset 2px 0 0 0 rgb(0, 221, 255);
+}
+.tab.drop-after {
+  box-shadow: inset -2px 0 0 0 rgb(0, 221, 255);
+}
 .tab-label {
   flex: 1;
   text-overflow: ellipsis;

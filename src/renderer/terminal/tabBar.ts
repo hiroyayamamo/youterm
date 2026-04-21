@@ -6,6 +6,7 @@ export interface TabBarCallbacks {
   onClose(tabId: string): void
   onContextMenu(tabId: string, x: number, y: number): void
   onRenameCommit(tabId: string, name: string | null): void
+  onMove(tabId: string, beforeTabId: string | null): void
 }
 
 export interface TabBarHandle {
@@ -27,6 +28,15 @@ export function createTabBar(container: HTMLElement, cb: TabBarCallbacks): TabBa
 
   let currentState: TabsState | null = null
   let renamingTabId: string | null = null
+  let draggingTabId: string | null = null
+
+  // Remove drop-zone highlights from every tab. Kept as a helper so drop /
+  // dragend / dragleave all end up calling the same cleanup.
+  const clearDropMarkers = () => {
+    for (const el of list.querySelectorAll('.tab')) {
+      el.classList.remove('drop-before', 'drop-after')
+    }
+  }
 
   const finishRename = (tabId: string, value: string | null) => {
     renamingTabId = null
@@ -89,6 +99,65 @@ export function createTabBar(container: HTMLElement, cb: TabBarCallbacks): TabBa
         tabEl.addEventListener('dblclick', () => {
           renamingTabId = tab.id
           if (currentState) render(currentState)
+        })
+
+        // Drag-and-drop reordering. Only attach when the tab is NOT in
+        // rename mode — the <input> inside would otherwise lose its drag
+        // default behaviour (text selection) to the tab's drag handlers.
+        tabEl.draggable = true
+        tabEl.addEventListener('dragstart', e => {
+          draggingTabId = tab.id
+          tabEl.classList.add('is-dragging')
+          if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move'
+            // Must set data or Firefox won't start the drag.
+            e.dataTransfer.setData('text/plain', tab.id)
+          }
+        })
+        tabEl.addEventListener('dragend', () => {
+          draggingTabId = null
+          tabEl.classList.remove('is-dragging')
+          clearDropMarkers()
+        })
+        tabEl.addEventListener('dragover', e => {
+          if (!draggingTabId || draggingTabId === tab.id) return
+          e.preventDefault()
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+          // Split the hovered tab horizontally at its midpoint to decide
+          // whether the drop would land before or after it.
+          const rect = tabEl.getBoundingClientRect()
+          const isBefore = e.clientX < rect.left + rect.width / 2
+          clearDropMarkers()
+          tabEl.classList.add(isBefore ? 'drop-before' : 'drop-after')
+        })
+        tabEl.addEventListener('dragleave', e => {
+          // Only clear when the cursor actually left this tab (dragleave
+          // also fires when moving onto a child node).
+          if (!tabEl.contains(e.relatedTarget as Node | null)) {
+            tabEl.classList.remove('drop-before', 'drop-after')
+          }
+        })
+        tabEl.addEventListener('drop', e => {
+          if (!draggingTabId || draggingTabId === tab.id) return
+          e.preventDefault()
+          e.stopPropagation()
+          const rect = tabEl.getBoundingClientRect()
+          const isBefore = e.clientX < rect.left + rect.width / 2
+          // "before this tab" / "before the tab right after this one" — if
+          // the target is already the last tab and we're dropping after,
+          // pass null so the item goes to the end.
+          let beforeId: string | null
+          if (isBefore) {
+            beforeId = tab.id
+          } else {
+            const tabs = currentState?.tabs ?? []
+            const idx = tabs.findIndex(t => t.id === tab.id)
+            beforeId = idx >= 0 && idx + 1 < tabs.length ? tabs[idx + 1].id : null
+          }
+          const dragged = draggingTabId
+          draggingTabId = null
+          clearDropMarkers()
+          cb.onMove(dragged, beforeId)
         })
       }
 

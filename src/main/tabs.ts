@@ -6,6 +6,7 @@ export type TabsAction =
   | { type: 'activate-tab'; id: string }
   | { type: 'rename-tab'; id: string; name: string | null }
   | { type: 'set-tab-cwds'; cwds: Record<string, string> }
+  | { type: 'move-tab'; id: string; beforeId: string | null }
 
 export function transitionTabs(state: TabsState, action: TabsAction): TabsState {
   switch (action.type) {
@@ -52,6 +53,24 @@ export function transitionTabs(state: TabsState, action: TabsAction): TabsState 
       })
       if (!changed) return state
       return { ...state, tabs: updated }
+    }
+    case 'move-tab': {
+      const fromIdx = state.tabs.findIndex(t => t.id === action.id)
+      if (fromIdx < 0) return state
+      if (action.beforeId === action.id) return state
+      const next = [...state.tabs]
+      const [tab] = next.splice(fromIdx, 1)
+      if (action.beforeId === null) {
+        next.push(tab)
+      } else {
+        const targetIdx = next.findIndex(t => t.id === action.beforeId)
+        if (targetIdx < 0) return state
+        next.splice(targetIdx, 0, tab)
+      }
+      // Skip re-emit when the order didn't actually change (e.g. moving the
+      // last tab to "end" or dropping it just before its current neighbor).
+      if (next.every((t, i) => t === state.tabs[i])) return state
+      return { ...state, tabs: next }
     }
   }
 }

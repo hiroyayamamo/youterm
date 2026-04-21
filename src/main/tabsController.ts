@@ -23,6 +23,7 @@ export interface TabsController {
   closeTab(tabId: string): Promise<CloseResult>
   activateTab(tabId: string): void
   renameTab(tabId: string, name: string | null): void
+  moveTab(tabId: string, beforeTabId: string | null): void
   write(tabId: string, data: string): void
   resize(tabId: string, cols: number, rows: number): void
   subscribe(cb: (s: TabsState) => void): () => void
@@ -136,6 +137,9 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
     },
     renameTab(tabId: string, name: string | null) {
       apply({ type: 'rename-tab', id: tabId, name })
+    },
+    moveTab(tabId: string, beforeTabId: string | null) {
+      apply({ type: 'move-tab', id: tabId, beforeId: beforeTabId })
     },
     write(tabId: string, data: string) {
       ptys.get(tabId)?.write(data)
