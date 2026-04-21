@@ -1,4 +1,4 @@
-import type { Tab, TabsState } from '../shared/types'
+import type { Pane, Tab, TabsState } from '../shared/types'
 
 export type TabsAction =
   | { type: 'new-tab'; id: string }
@@ -8,69 +8,125 @@ export type TabsAction =
   | { type: 'set-tab-cwds'; cwds: Record<string, string> }
   | { type: 'move-tab'; id: string; beforeId: string | null }
 
+// --- helpers -----------------------------------------------------------
+
+/** Find (paneIndex, tabIndex) of a tab id, or null if not present. */
+function locateTab(state: TabsState, id: string): { p: number; t: number } | null {
+  for (let p = 0; p < state.panes.length; p++) {
+    const t = state.panes[p].tabs.findIndex(x => x.id === id)
+    if (t >= 0) return { p, t }
+  }
+  return null
+}
+
+/** Replace one pane at index with a new pane object. */
+function replacePane(state: TabsState, index: number, pane: Pane): TabsState {
+  const panes = state.panes.slice()
+  panes[index] = pane
+  return { ...state, panes }
+}
+
+/**
+ * If the pane at `index` is empty and the state is currently split (length 2),
+ * collapse back to a single pane containing the other pane's tabs. Otherwise
+ * return state unchanged.
+ */
+function collapseIfEmpty(state: TabsState, index: number): TabsState {
+  if (state.panes.length !== 2) return state
+  if (state.panes[index].tabs.length > 0) return state
+  const keep = state.panes[1 - index]
+  return {
+    panes: [keep],
+    activePaneIndex: 0,
+    splitRatio: state.splitRatio,
+  }
+}
+
+// --- reducer -----------------------------------------------------------
+
 export function transitionTabs(state: TabsState, action: TabsAction): TabsState {
   switch (action.type) {
     case 'new-tab': {
       const newTab: Tab = { id: action.id, customName: null, cwd: null }
-      return {
-        tabs: [...state.tabs, newTab],
+      const paneIdx = state.activePaneIndex
+      const pane = state.panes[paneIdx]
+      return replacePane(state, paneIdx, {
+        tabs: [...pane.tabs, newTab],
         activeId: action.id,
-      }
+      })
     }
     case 'close-tab': {
-      const idx = state.tabs.findIndex(t => t.id === action.id)
-      if (idx < 0) return state
-      if (state.tabs.length === 1) return state
-      const nextTabs = state.tabs.filter(t => t.id !== action.id)
-      let nextActive = state.activeId
-      if (state.activeId === action.id) {
-        nextActive = idx > 0 ? state.tabs[idx - 1].id : state.tabs[idx + 1].id
+      const loc = locateTab(state, action.id)
+      if (!loc) return state
+      const pane = state.panes[loc.p]
+      // All tabs across all panes — last tab overall keeps state unchanged
+      // (window close is the controller's responsibility).
+      const totalTabs = state.panes.reduce((n, p) => n + p.tabs.length, 0)
+      if (totalTabs <= 1) return state
+      const nextTabs = pane.tabs.filter(t => t.id !== action.id)
+      let nextActiveId = pane.activeId
+      if (pane.activeId === action.id) {
+        nextActiveId = loc.t > 0 ? pane.tabs[loc.t - 1].id : pane.tabs[loc.t + 1].id
       }
-      return { tabs: nextTabs, activeId: nextActive }
+      const withRemoved = replacePane(state, loc.p, { tabs: nextTabs, activeId: nextActiveId })
+      return collapseIfEmpty(withRemoved, loc.p)
     }
     case 'activate-tab': {
-      if (!state.tabs.some(t => t.id === action.id)) return state
-      if (state.activeId === action.id) return state
-      return { ...state, activeId: action.id }
+      const loc = locateTab(state, action.id)
+      if (!loc) return state
+      const pane = state.panes[loc.p]
+      if (state.activePaneIndex === loc.p && pane.activeId === action.id) return state
+      const next = replacePane(state, loc.p, { ...pane, activeId: action.id })
+      return { ...next, activePaneIndex: loc.p }
     }
     case 'rename-tab': {
-      const idx = state.tabs.findIndex(t => t.id === action.id)
-      if (idx < 0) return state
-      if (state.tabs[idx].customName === action.name) return state
-      const nextTabs = state.tabs.map(t =>
+      const loc = locateTab(state, action.id)
+      if (!loc) return state
+      const pane = state.panes[loc.p]
+      if (pane.tabs[loc.t].customName === action.name) return state
+      const nextTabs = pane.tabs.map(t =>
         t.id === action.id ? { ...t, customName: action.name } : t,
       )
-      return { ...state, tabs: nextTabs }
+      return replacePane(state, loc.p, { ...pane, tabs: nextTabs })
     }
     case 'set-tab-cwds': {
       let changed = false
-      const updated = state.tabs.map(t => {
-        const next = action.cwds[t.id]
-        if (next === undefined) return t
-        if (next === t.cwd) return t
-        changed = true
-        return { ...t, cwd: next }
+      const nextPanes = state.panes.map(p => {
+        const updated = p.tabs.map(t => {
+          const next = action.cwds[t.id]
+          if (next === undefined) return t
+          if (next === t.cwd) return t
+          changed = true
+          return { ...t, cwd: next }
+        })
+        return updated === p.tabs ? p : { ...p, tabs: updated }
       })
       if (!changed) return state
-      return { ...state, tabs: updated }
+      return { ...state, panes: nextPanes }
     }
     case 'move-tab': {
-      const fromIdx = state.tabs.findIndex(t => t.id === action.id)
-      if (fromIdx < 0) return state
+      const fromLoc = locateTab(state, action.id)
+      if (!fromLoc) return state
       if (action.beforeId === action.id) return state
-      const next = [...state.tabs]
-      const [tab] = next.splice(fromIdx, 1)
-      if (action.beforeId === null) {
-        next.push(tab)
-      } else {
-        const targetIdx = next.findIndex(t => t.id === action.beforeId)
-        if (targetIdx < 0) return state
-        next.splice(targetIdx, 0, tab)
+      const pane = state.panes[fromLoc.p]
+      // move-tab is within the same pane. If beforeId is in a different pane
+      // (or null in a split state), treat it as a no-op — caller should use
+      // move-tab-to-pane for cross-pane moves.
+      if (action.beforeId !== null) {
+        const targetLoc = locateTab(state, action.beforeId)
+        if (!targetLoc || targetLoc.p !== fromLoc.p) return state
       }
-      // Skip re-emit when the order didn't actually change (e.g. moving the
-      // last tab to "end" or dropping it just before its current neighbor).
-      if (next.every((t, i) => t === state.tabs[i])) return state
-      return { ...state, tabs: next }
+      const tabs = pane.tabs.slice()
+      const [tab] = tabs.splice(fromLoc.t, 1)
+      if (action.beforeId === null) {
+        tabs.push(tab)
+      } else {
+        const targetIdx = tabs.findIndex(t => t.id === action.beforeId)
+        if (targetIdx < 0) return state
+        tabs.splice(targetIdx, 0, tab)
+      }
+      if (tabs.every((t, i) => t === pane.tabs[i])) return state
+      return replacePane(state, fromLoc.p, { ...pane, tabs })
     }
   }
 }
