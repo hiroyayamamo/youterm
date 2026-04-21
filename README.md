@@ -59,7 +59,13 @@ npm run typecheck  # tsc --noEmit
 
 ## Stack
 
-Electron 32 · TypeScript · Vite (`electron-vite`) · xterm.js · node-pty · electron-builder
+Electron 41 · TypeScript · Vite (`electron-vite`) · xterm.js · node-pty · electron-builder
+
+## Known Limitations
+
+**Resize-induced scrollback duplication in some TUIs.** When you drag the splitter or resize the window, youterm sends a `SIGWINCH` to the shell's child processes so they reflow to the new size. TUIs that re-render their entire view on `SIGWINCH` — Claude Code is a notable example — write a copy of their current banner / prompt / last response into the scrollback on every redraw, so you may see a duplicated block above your active line after each resize.
+
+youterm coalesces resize events so the child receives **at most one `SIGWINCH` per drag** (same-size no-ops are suppressed entirely), but the redraw itself is the TUI's behavior and can't be fully eliminated from the outside. Your active prompt and anything you type after the resize is unaffected.
 
 ## License
 
@@ -96,6 +102,12 @@ open release/mac-arm64/youterm.app
 ```
 
 `youterm.app` を `/Applications` に入れれば Dock / Launchpad から使えます。署名なしビルドなので**初回だけ右クリック → 開く**で Gatekeeper の警告を通してください。
+
+### 既知の制限
+
+**リサイズ時に一部 TUI のスクロールバックが重複することがある。** splitter や window をリサイズするとき、youterm はシェルの子プロセスに `SIGWINCH` を送って新しいサイズに追従させます。`SIGWINCH` を受けるたびに表示全体を再描画する TUI(Claude Code など)は、その時点の banner / prompt / 直前の応答を 1 コピー分スクロールバックに書き出すため、**リサイズのたびに見返し領域に重複ブロックが残る**ことがあります。
+
+youterm はリサイズイベントを集約して **1 ドラッグあたり最大 1 回の `SIGWINCH`** に抑えています(同サイズの re-send は完全にスキップ)が、その 1 回の再描画は TUI 側の挙動なので外側から完全には消せません。アクティブなプロンプトやリサイズ後に入力する内容には影響しません。
 
 ### ライセンス
 
