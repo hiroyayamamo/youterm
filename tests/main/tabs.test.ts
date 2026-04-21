@@ -247,6 +247,72 @@ describe('transitionTabs', () => {
     })
   })
 
+  describe('move-tab-to-pane', () => {
+    const splitState = (): TabsState => twoPanes(
+      { tabs: [
+        { id: '1', customName: null, cwd: null },
+        { id: '2', customName: null, cwd: null },
+      ], activeId: '1' },
+      { tabs: [
+        { id: '3', customName: null, cwd: null },
+      ], activeId: '3' },
+      0,
+    )
+
+    it('moves a tab to the end of the target pane when beforeId is null', () => {
+      const next = transitionTabs(splitState(), { type: 'move-tab-to-pane', id: '1', paneIndex: 1, beforeId: null })
+      expect(next.panes[0].tabs.map(t => t.id)).toEqual(['2'])
+      expect(next.panes[1].tabs.map(t => t.id)).toEqual(['3', '1'])
+    })
+
+    it('inserts before a specific tab in the target pane', () => {
+      const next = transitionTabs(splitState(), { type: 'move-tab-to-pane', id: '1', paneIndex: 1, beforeId: '3' })
+      expect(next.panes[1].tabs.map(t => t.id)).toEqual(['1', '3'])
+    })
+
+    it('makes the moved tab active in the target pane and shifts focus', () => {
+      const next = transitionTabs(splitState(), { type: 'move-tab-to-pane', id: '1', paneIndex: 1, beforeId: null })
+      expect(next.panes[1].activeId).toBe('1')
+      expect(next.activePaneIndex).toBe(1)
+    })
+
+    it('reassigns source pane activeId when the moved tab was active there', () => {
+      const s = twoPanes(
+        { tabs: [
+          { id: '1', customName: null, cwd: null },
+          { id: '2', customName: null, cwd: null },
+        ], activeId: '1' },
+        { tabs: [{ id: '3', customName: null, cwd: null }], activeId: '3' },
+        0,
+      )
+      const next = transitionTabs(s, { type: 'move-tab-to-pane', id: '1', paneIndex: 1, beforeId: null })
+      expect(next.panes[0].activeId).toBe('2')
+    })
+
+    it('auto-unsplits when the source pane becomes empty', () => {
+      const s = twoPanes(
+        { tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' },
+        { tabs: [{ id: '2', customName: null, cwd: null }], activeId: '2' },
+        0,
+      )
+      const next = transitionTabs(s, { type: 'move-tab-to-pane', id: '1', paneIndex: 1, beforeId: null })
+      expect(next.panes).toHaveLength(1)
+      expect(next.panes[0].tabs.map(t => t.id)).toEqual(['2', '1'])
+    })
+
+    it('returns same reference when paneIndex === source pane and beforeId is null', () => {
+      const s = splitState()
+      const next = transitionTabs(s, { type: 'move-tab-to-pane', id: '1', paneIndex: 0, beforeId: null })
+      expect(next.panes[0].tabs.map(t => t.id)).toEqual(['2', '1'])
+    })
+
+    it('is a no-op when the tab id does not exist', () => {
+      const s = splitState()
+      const next = transitionTabs(s, { type: 'move-tab-to-pane', id: 'no-such-id', paneIndex: 1, beforeId: null })
+      expect(next).toBe(s)
+    })
+  })
+
   describe('move-tab', () => {
     const threeTabs = (): TabsState => onePane([
       { id: '1', customName: null, cwd: null },

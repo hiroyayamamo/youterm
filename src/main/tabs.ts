@@ -11,6 +11,7 @@ export type TabsAction =
   | { type: 'unsplit-panes' }
   | { type: 'activate-pane'; index: 0 | 1 }
   | { type: 'set-split-ratio'; ratio: number }
+  | { type: 'move-tab-to-pane'; id: string; paneIndex: 0 | 1; beforeId: string | null }
 
 // --- helpers -----------------------------------------------------------
 
@@ -143,6 +144,43 @@ export function transitionTabs(state: TabsState, action: TabsAction): TabsState 
       const clamped = Math.max(0.1, Math.min(0.9, action.ratio))
       if (clamped === state.splitRatio) return state
       return { ...state, splitRatio: clamped }
+    }
+    case 'move-tab-to-pane': {
+      const fromLoc = locateTab(state, action.id)
+      if (!fromLoc) return state
+      if (action.paneIndex < 0 || action.paneIndex >= state.panes.length) return state
+
+      // Same-pane move → delegate to move-tab semantics
+      if (fromLoc.p === action.paneIndex) {
+        return transitionTabs(state, { type: 'move-tab', id: action.id, beforeId: action.beforeId })
+      }
+
+      const sourcePane = state.panes[fromLoc.p]
+      const targetPane = state.panes[action.paneIndex]
+      const tab = sourcePane.tabs[fromLoc.t]
+
+      // Remove from source
+      const sourceTabs = sourcePane.tabs.filter(t => t.id !== action.id)
+      let sourceActiveId = sourcePane.activeId
+      if (sourcePane.activeId === action.id && sourceTabs.length > 0) {
+        sourceActiveId = fromLoc.t > 0 ? sourcePane.tabs[fromLoc.t - 1].id : sourcePane.tabs[fromLoc.t + 1].id
+      }
+
+      // Insert into target
+      const targetTabs = targetPane.tabs.slice()
+      if (action.beforeId === null) {
+        targetTabs.push(tab)
+      } else {
+        const idx = targetTabs.findIndex(t => t.id === action.beforeId)
+        if (idx < 0) return state
+        targetTabs.splice(idx, 0, tab)
+      }
+
+      const panes = state.panes.slice()
+      panes[fromLoc.p] = { tabs: sourceTabs, activeId: sourceActiveId }
+      panes[action.paneIndex] = { tabs: targetTabs, activeId: action.id }
+      const withMoved: TabsState = { ...state, panes, activePaneIndex: action.paneIndex }
+      return collapseIfEmpty(withMoved, fromLoc.p)
     }
     case 'move-tab': {
       const fromLoc = locateTab(state, action.id)
