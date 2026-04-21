@@ -207,7 +207,8 @@ export async function attachTabs(
   const updateWindowTitle = () => {
     if (win.isDestroyed()) return
     const s = tabsController.getState()
-    const active = s.tabs.find(t => t.id === s.activeId)
+    const pane = s.panes[s.activePaneIndex]
+    const active = pane?.tabs.find(t => t.id === pane.activeId)
     const name = active?.customName ?? 'zsh'
     win.setTitle(`youterm - ${name}`)
   }
@@ -296,11 +297,13 @@ export async function attachTabs(
   }
 
   // Finder drag-and-drop from either preload (root or terminal): a single
-  // string payload is written to the currently active tab's pty.
+  // string payload is written to the focused pane's active tab's pty.
   const onDndDrop = (_e: unknown, payload: unknown) => {
     if (typeof payload !== 'string' || payload.length === 0) return
     const state = tabsController.getState()
-    tabsController.write(state.activeId, payload)
+    const pane = state.panes[state.activePaneIndex]
+    if (!pane) return
+    tabsController.write(pane.activeId, payload)
   }
 
   ipcMain.on('tabs:new', onNew)
