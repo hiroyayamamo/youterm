@@ -187,6 +187,37 @@ export function createTabBar(
     }
   }
 
+  container.addEventListener('dragover', e => {
+    // Highlight the tab-bar as a drop target whenever a drag is over it.
+    // Same-pane drops still work correctly; highlight is purely visual.
+    container.classList.add('is-drop-target')
+    e.preventDefault()
+  })
+  container.addEventListener('dragleave', e => {
+    if (!container.contains(e.relatedTarget as Node | null)) {
+      container.classList.remove('is-drop-target')
+    }
+  })
+  container.addEventListener('drop', e => {
+    container.classList.remove('is-drop-target')
+    // If the drop didn't land on any specific tab (i.e. the event target is
+    // the tab-bar container or the tab-list wrapper, not a .tab), treat it
+    // as "append to the end".
+    const targetEl = e.target as Element | null
+    const landedOnTab = targetEl?.closest('.tab')
+    if (landedOnTab) return  // per-tab drop handlers handle this case
+    const sourceTabId = e.dataTransfer?.getData('text/plain') ?? ''
+    if (!sourceTabId) return
+    const sourcePaneStr = e.dataTransfer?.getData('application/x-youterm-pane') ?? ''
+    const sourcePaneIdx = sourcePaneStr === '' ? paneIndex : Number(sourcePaneStr) as 0 | 1
+    e.preventDefault()
+    if (sourcePaneIdx === paneIndex) {
+      cb.onMove(sourceTabId, null)
+    } else {
+      cb.onMoveAcross(sourceTabId, null)
+    }
+  })
+
   const startRename = (tabId: string) => {
     renamingTabId = tabId
     if (currentPane) render(currentPane)
