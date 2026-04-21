@@ -33,6 +33,10 @@ export interface YoutermAPI {
   tabsActivate(tabId: string): void
   tabsRename(tabId: string, name: string | null): void
   tabsMove(tabId: string, beforeTabId: string | null): void
+  tabsMoveAcross(tabId: string, paneIndex: 0 | 1, beforeTabId: string | null): void
+  panesToggleSplit(): void
+  panesActivate(index: 0 | 1): void
+  panesSetRatio(ratio: number): void
   tabsContextMenu(tabId: string, x: number, y: number): void
   terminalRuntimeReady(tabId: string): void
 }
@@ -70,14 +74,21 @@ export interface Tab {
   cwd: string | null
 }
 
-export interface TabsState {
+export interface Pane {
   tabs: Tab[]
   activeId: string
 }
 
+export interface TabsState {
+  panes: Pane[]
+  activePaneIndex: number
+  splitRatio: number
+}
+
 export const INITIAL_TABS_STATE: TabsState = {
-  tabs: [{ id: '1', customName: null, cwd: null }],
-  activeId: '1',
+  panes: [{ tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' }],
+  activePaneIndex: 0,
+  splitRatio: 0.5,
 }
 
 declare global {
