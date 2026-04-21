@@ -73,6 +73,11 @@ function createXtermInstance(): { term: Terminal; fit: FitAddon } {
 
 let lastSplitterRatio = 0.5
 let splitterPending = false
+// True while the user is actively dragging the splitter handle. Used to
+// suppress ptyResize entirely during the drag — we only want ONE
+// SIGWINCH (on mouseup) so a TUI like Claude Code redraws once, not
+// once per mid-drag pause.
+let isInteractiveResize = false
 
 async function init(): Promise<void> {
   const root = document.getElementById('terminal-root')
@@ -188,8 +193,14 @@ async function init(): Promise<void> {
         rt.fit.fit()
       } catch {}
     }
+    // Suppress ptyResize while the splitter is actively being dragged —
+    // the drag's mouseup handler fires a single flushPtyResize instead.
+    // Outside of a splitter drag (window resize, programmatic layout
+    // change, etc.) we debounce 300 ms so rapid successive ResizeObserver
+    // fires coalesce into one SIGWINCH.
+    if (isInteractiveResize) return
     if (ptyResizeDebounce !== null) clearTimeout(ptyResizeDebounce)
-    ptyResizeDebounce = setTimeout(flushPtyResize, 150)
+    ptyResizeDebounce = setTimeout(flushPtyResize, 300)
   }
 
   const applyActiveVisibility = () => {
@@ -280,6 +291,13 @@ async function init(): Promise<void> {
     el.addEventListener('mousedown', down => {
       down.preventDefault()
       el.classList.add('is-dragging')
+      isInteractiveResize = true
+      // Cancel any pending debounced ptyResize so a late fire mid-drag
+      // can't leak a SIGWINCH to the child.
+      if (ptyResizeDebounce !== null) {
+        clearTimeout(ptyResizeDebounce)
+        ptyResizeDebounce = null
+      }
       const root = document.getElementById('terminal-root')
       if (!root) return
       const rootRect = root.getBoundingClientRect()
@@ -305,6 +323,11 @@ async function init(): Promise<void> {
         window.removeEventListener('mousemove', onMove)
         window.removeEventListener('mouseup', onUp)
         window.youtermAPI.panesSetRatio(lastSplitterRatio)
+        isInteractiveResize = false
+        // Fire a single ptyResize now, so the child gets exactly one
+        // SIGWINCH for the whole drag regardless of how long or jittery
+        // it was.
+        flushPtyResize()
       }
       window.addEventListener('mousemove', onMove)
       window.addEventListener('mouseup', onUp)

@@ -2,6 +2,20 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.16.8] — 2026-04-21
+
+### Fixed
+- **splitter ドラッグ中の TUI 重複出力を根治(v0.16.7 の debounce だけでは取りきれなかった分)**
+  - 0.16.7 で debounce 150ms を入れたが、ゆっくりドラッグ中に 150ms 以上の pause があると SIGWINCH が漏れていた。結果、ドラッグ 1 回の中で複数回の Claude Code 再描画が起きて重複表示が残る
+  - 対応:
+    - `isInteractiveResize` フラグを導入。splitter mousedown で true、mouseup で false
+    - ドラッグ中は `refitActive` が ptyResize を**完全に抑制**(視覚 fit のみ)
+    - mouseup で `flushPtyResize()` を即実行 → **ドラッグ 1 セッション = SIGWINCH 1 回** 保証
+    - 非ドラッグの resize(ウインドウ枠ドラッグ等)は debounce 300ms(150ms から伸ばした)
+  - 結果: splitter をどう動かしても、離した瞬間に 1 回だけ Claude が redraw、重複なし
+
+---
+
 ## [0.16.7] — 2026-04-21
 
 ### Fixed
