@@ -2,6 +2,34 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.16.0] — 2026-04-21
+
+### Added
+- **画面 2 分割機能**(`Cmd+D` でトグル)
+  - 縦分割、左右ペインにそれぞれ独立したタブ群
+  - 1 → 2 分割時は右 pane に新タブを自動生成、右にフォーカス移動
+  - タブを左右の pane 間でドラッグ&ドロップで移動(xterm ランタイムは破棄されず、DOM の container だけ付け替え)
+  - splitter ドラッグで比率変更可(0.1〜0.9 clamp、最小 pane 幅 200px)
+  - 分割状態 / 各 pane のタブ構成 / 比率 / フォーカス pane を永続化
+  - 旧 shape の `tabs.json` は自動マイグレーション
+  - pane の最後のタブを閉じる / 移動で pane が空になる → auto-unsplit
+
+### Changed
+- `TabsState` を `{ panes: Pane[], activePaneIndex, splitRatio }` に refactor
+- 既存 reducer アクション(new-tab / close-tab / activate-tab / rename-tab / set-tab-cwds / move-tab)を pane-aware に書き換え
+- `#tab-bar` / `#tab-list` / `#tab-new`(id)→ class 選択子にリネーム(pane ごとに複数存在するため)
+- `#terminal-root` を `display: flex; flex-direction: row` のフレックスレイアウトに
+- Finder ドラッグ&ドロップの着地先をフォーカス pane のアクティブタブに変更
+
+### Tests
+- 旧 shape → 新 shape の migration テスト 4 件追加(`tabsStore.test.ts`)
+- 新規 reducer アクション 5 種すべてにテストケース(`split-panes`, `unsplit-panes`, `activate-pane`, `set-split-ratio`, `move-tab-to-pane`)
+- auto-unsplit の振る舞い検証、最後のタブ保護テスト追加
+- controller の `toggleSplit` / `moveTabToPane` のテスト追加
+- 計 115 → 142 tests(+27)
+
+---
+
 ## [0.15.30] — 2026-04-21
 
 ### Added
