@@ -71,6 +71,9 @@ function createXtermInstance(): { term: Terminal; fit: FitAddon } {
   return { term, fit }
 }
 
+let lastSplitterRatio = 0.5
+let splitterPending = false
+
 async function init(): Promise<void> {
   const root = document.getElementById('terminal-root')
   if (!root) throw new Error('terminal-root missing')
@@ -230,8 +233,39 @@ async function init(): Promise<void> {
     runtimes.delete(tabId)
   }
 
-  function installSplitterDrag(_el: HTMLDivElement) {
-    // Implemented in Task 16. No-op for now.
+  function installSplitterDrag(el: HTMLDivElement) {
+    el.addEventListener('mousedown', down => {
+      down.preventDefault()
+      el.classList.add('is-dragging')
+      const root = document.getElementById('terminal-root')
+      if (!root) return
+      const rootRect = root.getBoundingClientRect()
+      const onMove = (e: MouseEvent) => {
+        const raw = (e.clientX - rootRect.left) / rootRect.width
+        // Enforce 200px min pane width in addition to the 0.1/0.9 clamp
+        // the reducer applies. Ratio range = [minLeft, maxLeft].
+        const minLeftPct = Math.max(0.1, 200 / rootRect.width)
+        const maxLeftPct = Math.min(0.9, 1 - 200 / rootRect.width)
+        const ratio = Math.max(minLeftPct, Math.min(maxLeftPct, raw))
+        applySplitRatioToLayout(ratio)
+        lastSplitterRatio = ratio
+        if (!splitterPending) {
+          splitterPending = true
+          requestAnimationFrame(() => {
+            splitterPending = false
+            window.youtermAPI.panesSetRatio(lastSplitterRatio)
+          })
+        }
+      }
+      const onUp = () => {
+        el.classList.remove('is-dragging')
+        window.removeEventListener('mousemove', onMove)
+        window.removeEventListener('mouseup', onUp)
+        window.youtermAPI.panesSetRatio(lastSplitterRatio)
+      }
+      window.addEventListener('mousemove', onMove)
+      window.addEventListener('mouseup', onUp)
+    })
   }
 
   function buildPaneDOM(paneIndex: 0 | 1): PaneDOM {
