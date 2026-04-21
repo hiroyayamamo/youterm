@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.16.7] — 2026-04-21
+
+### Fixed
+- **splitter ドラッグ中に Claude Code 等の TUI が出力を 2–3 回繰り返してスクロールバックに流し込む問題を修正**
+  - 原因: `refitActive()` が ResizeObserver 経由で 60 Hz 発火し、毎フレーム `ptyResize()` を呼んでいた。pty 側は SIGWINCH を都度送るため、Claude Code のような自前で viewport を redraw する TUI が**毎フレーム history を再出力**してスクロールバックに積み上がっていた
+  - 対応: fit(視覚の xterm リサイズ)は従来通り即座に実行するが、**`ptyResize()` を 150ms debounce** に変更。ドラッグ中は xterm の幅だけ追従し、drag 終了後まとめて 1 回だけ pty に通知 → 子プロセスへの SIGWINCH も 1 回だけ
+  - `ensureRuntime` の cross-pane 再 parent 時の多段 fit も同じ debounce 経由に統一
+  - 結果: 任意のドラッグ操作後、Claude Code の UI 再描画は 1 回だけ、重複表示なし
+
+---
+
 ## [0.16.6] — 2026-04-21
 
 ### Fixed

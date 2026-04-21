@@ -150,11 +150,31 @@ async function init(): Promise<void> {
     paneDOMs.length > 0 &&
     paneDOMs.some(pd => pd.termArea.offsetWidth > 0 && pd.termArea.offsetHeight > 0)
 
-  // Refit every pane's active xterm to its current container size and push
-  // the new cols/rows to the pty. When the splitter is dragged or the
-  // window is resized BOTH panes need this — fitting only the focused
-  // pane left the other one stuck at its previous dimensions and caused
-  // lines to overflow without wrapping.
+  // Refit every pane's active xterm to its current container size.
+  //
+  // The visual fit runs immediately — that keeps the terminal snug to the
+  // pane during a splitter drag. The pty resize (which triggers SIGWINCH
+  // in the child) is debounced: interactive TUIs like Claude Code redraw
+  // their viewport on every SIGWINCH, and at 60 Hz drags that redraw
+  // storm floods the scrollback with duplicated history. Collapsing the
+  // pty resize into a single event 150 ms after the last change lets the
+  // child redraw exactly once per user-initiated resize.
+  let ptyResizeDebounce: ReturnType<typeof setTimeout> | null = null
+  const flushPtyResize = () => {
+    ptyResizeDebounce = null
+    if (!tabsState) return
+    for (let i = 0; i < tabsState.panes.length; i++) {
+      const pane = tabsState.panes[i]
+      const rt = runtimes.get(pane.activeId)
+      if (!rt) continue
+      const pd = paneDOMs[i]
+      if (!pd) continue
+      if (pd.termArea.offsetWidth === 0 || pd.termArea.offsetHeight === 0) continue
+      try {
+        window.youtermAPI.ptyResize(pane.activeId, { cols: rt.term.cols, rows: rt.term.rows })
+      } catch {}
+    }
+  }
   const refitActive = () => {
     if (!tabsState) return
     for (let i = 0; i < tabsState.panes.length; i++) {
@@ -166,9 +186,10 @@ async function init(): Promise<void> {
       if (pd.termArea.offsetWidth === 0 || pd.termArea.offsetHeight === 0) continue
       try {
         rt.fit.fit()
-        window.youtermAPI.ptyResize(pane.activeId, { cols: rt.term.cols, rows: rt.term.rows })
       } catch {}
     }
+    if (ptyResizeDebounce !== null) clearTimeout(ptyResizeDebounce)
+    ptyResizeDebounce = setTimeout(flushPtyResize, 150)
   }
 
   const applyActiveVisibility = () => {
@@ -196,18 +217,20 @@ async function init(): Promise<void> {
     if (existing) {
       if (existing.container.parentElement !== targetTermArea) {
         targetTermArea.appendChild(existing.container)
-        // Multi-shot fit after re-parent. One rAF often runs before the
-        // browser has settled the new flex layout — the container's
-        // width reads stale and fit() wedges xterm at the old narrow
-        // cols. Three shots (rAF, 50 ms, 150 ms) plus a manual refresh
-        // ensures the final dimensions are picked up and the buffer is
-        // redrawn to them.
+        // Multi-shot fit after re-parent: the first rAF often runs
+        // before the browser has settled the new flex layout, leaving
+        // xterm wedged at the pre-move cols. Running fit at rAF / 50ms
+        // / 150ms lets the final post-layout dimensions win. The
+        // ptyResize is delegated to the shared debounce in refitActive,
+        // so the child only gets one SIGWINCH at the end — matches the
+        // splitter-drag path.
         const doFit = () => {
           try {
             existing.fit.fit()
-            window.youtermAPI.ptyResize(tabId, { cols: existing.term.cols, rows: existing.term.rows })
             existing.term.refresh(0, existing.term.rows - 1)
           } catch {}
+          if (ptyResizeDebounce !== null) clearTimeout(ptyResizeDebounce)
+          ptyResizeDebounce = setTimeout(flushPtyResize, 150)
         }
         requestAnimationFrame(doFit)
         setTimeout(doFit, 50)
