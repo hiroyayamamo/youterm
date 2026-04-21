@@ -13,3 +13,6 @@ test-results/
 # Local project management / Claude Code state — never publish
 .claude/
 _claude/
+
+# Git worktrees for feature branches
+.worktrees/
