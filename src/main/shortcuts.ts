@@ -138,6 +138,11 @@ export function installShortcuts(
             settings.dispatch({ type: 'set-video-fill', value: !current })
           },
         },
+        {
+          label: 'Toggle Split Pane',
+          accelerator: 'Cmd+D',
+          click: () => { tabs.toggleSplit() },
+        },
         { type: 'separator' },
         { label: 'Reload YouTube', accelerator: 'Cmd+R', click: () => { void youtube.reloadAdBlockAndIframe() } },
         { label: 'Hard Reload', accelerator: 'Cmd+Shift+R', click: () => bundle.win.webContents.reloadIgnoringCache() },
