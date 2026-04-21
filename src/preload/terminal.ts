@@ -34,7 +34,8 @@ ipcRenderer.on('youtube:reload', (_e, url?: string) => {
 })
 let activeTabId: string | null = null
 ipcRenderer.on('tabs:state', (_e, s: TabsState) => {
-  activeTabId = s.activeId
+  // File-drop handler routes to the focused pane's active tab.
+  activeTabId = s.panes[s.activePaneIndex]?.activeId ?? null
   for (const h of tabsStateHandlers) h(s)
 })
 ipcRenderer.on('tabs:start-rename', (_e, tabId: string) => {
