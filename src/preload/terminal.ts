@@ -95,6 +95,12 @@ contextBridge.exposeInMainWorld('youtermAPI', {
   tabsActivate(tabId: string) { ipcRenderer.send('tabs:activate', { tabId }) },
   tabsRename(tabId: string, name: string | null) { ipcRenderer.send('tabs:rename', { tabId, name }) },
   tabsMove(tabId: string, beforeTabId: string | null) { ipcRenderer.send('tabs:move', { tabId, beforeTabId }) },
+  tabsMoveAcross(tabId: string, paneIndex: 0 | 1, beforeTabId: string | null) {
+    ipcRenderer.send('tabs:move-across', { tabId, paneIndex, beforeTabId })
+  },
+  panesToggleSplit() { ipcRenderer.send('panes:toggle-split') },
+  panesActivate(index: 0 | 1) { ipcRenderer.send('panes:activate', { index }) },
+  panesSetRatio(ratio: number) { ipcRenderer.send('panes:set-ratio', { ratio }) },
   tabsContextMenu(tabId: string, x: number, y: number) { ipcRenderer.send('tabs:context-menu', { tabId, x, y }) },
 
   terminalRuntimeReady(tabId: string) { ipcRenderer.send('terminal:runtime-ready', tabId) },
