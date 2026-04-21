@@ -165,6 +165,12 @@ async function init(): Promise<void> {
   // pty resize into a single event 150 ms after the last change lets the
   // child redraw exactly once per user-initiated resize.
   let ptyResizeDebounce: ReturnType<typeof setTimeout> | null = null
+  // Track the last cols/rows sent to each pty. We skip the IPC if the
+  // target size hasn't actually changed — each SIGWINCH, even for the
+  // same size, causes TUIs like Claude Code to redraw and pollute the
+  // scrollback with a duplicate of their current view, so minimizing
+  // redundant resize events is the main lever we have.
+  const lastPtySize = new Map<string, { cols: number; rows: number }>()
   const flushPtyResize = () => {
     ptyResizeDebounce = null
     if (!tabsState) return
@@ -175,8 +181,13 @@ async function init(): Promise<void> {
       const pd = paneDOMs[i]
       if (!pd) continue
       if (pd.termArea.offsetWidth === 0 || pd.termArea.offsetHeight === 0) continue
+      const cols = rt.term.cols
+      const rows = rt.term.rows
+      const last = lastPtySize.get(pane.activeId)
+      if (last && last.cols === cols && last.rows === rows) continue
       try {
-        window.youtermAPI.ptyResize(pane.activeId, { cols: rt.term.cols, rows: rt.term.rows })
+        window.youtermAPI.ptyResize(pane.activeId, { cols, rows })
+        lastPtySize.set(pane.activeId, { cols, rows })
       } catch {}
     }
   }
@@ -268,7 +279,13 @@ async function init(): Promise<void> {
       if (container.offsetWidth === 0 || container.offsetHeight === 0) return
       try {
         fit.fit()
-        window.youtermAPI.ptyResize(tabId, { cols: term.cols, rows: term.rows })
+        const cols = term.cols
+        const rows = term.rows
+        const last = lastPtySize.get(tabId)
+        if (!last || last.cols !== cols || last.rows !== rows) {
+          window.youtermAPI.ptyResize(tabId, { cols, rows })
+          lastPtySize.set(tabId, { cols, rows })
+        }
       } catch {}
     })
 

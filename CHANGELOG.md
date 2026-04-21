@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.16.9] — 2026-04-21
+
+### Fixed
+- **splitter 1 ドラッグ = SIGWINCH 1 回の保証を強化**
+  - v0.16.8 後、mouseup で flushPtyResize するが、その直後に遅延した ResizeObserver が発火して debounce 経由でもう 1 回 ptyResize を送ってしまうケースがあった。node-pty は同サイズでも SIGWINCH を送るため、Claude Code はもう 1 回 redraw → 重複
+  - 対応: 各 tab について**最後に pty に送った cols/rows を Map で記録**。次の ptyResize が同サイズなら IPC 自体をスキップ
+  - ensureRuntime の新規 runtime 作成パスの直接 ptyResize も同じチェックを通す
+  - 結果: 「同じサイズを 2 回送って SIGWINCH 2 発」のパターンが根絶、1 drag = 1 SIGWINCH(= 1 duplicate)に収束
+
+---
+
 ## [0.16.8] — 2026-04-21
 
 ### Fixed
