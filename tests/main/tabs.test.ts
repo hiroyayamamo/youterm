@@ -56,6 +56,29 @@ describe('transitionTabs', () => {
       const next = transitionTabs(INITIAL_TABS_STATE, { type: 'close-tab', id: 'zzz' })
       expect(next).toBe(INITIAL_TABS_STATE)
     })
+
+    it('auto-unsplits when closing the last tab in a pane (split state)', () => {
+      const s = twoPanes(
+        { tabs: [{ id: '1', customName: null, cwd: null }, { id: '2', customName: null, cwd: null }], activeId: '1' },
+        { tabs: [{ id: '3', customName: null, cwd: null }], activeId: '3' },
+        1,
+      )
+      const next = transitionTabs(s, { type: 'close-tab', id: '3' })
+      expect(next.panes).toHaveLength(1)
+      expect(next.panes[0].tabs.map(t => t.id)).toEqual(['1', '2'])
+      expect(next.activePaneIndex).toBe(0)
+    })
+
+    it('does not close the last remaining tab across both panes', () => {
+      const s = twoPanes(
+        { tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' },
+        { tabs: [{ id: '2', customName: null, cwd: null }], activeId: '2' },
+      )
+      const intermediate = transitionTabs(s, { type: 'close-tab', id: '2' })
+      expect(intermediate.panes).toHaveLength(1)
+      const next = transitionTabs(intermediate, { type: 'close-tab', id: '1' })
+      expect(next).toBe(intermediate)
+    })
   })
 
   describe('activate-tab', () => {

@@ -70,7 +70,7 @@ export function transitionTabs(state: TabsState, action: TabsAction): TabsState 
       if (totalTabs <= 1) return state
       const nextTabs = pane.tabs.filter(t => t.id !== action.id)
       let nextActiveId = pane.activeId
-      if (pane.activeId === action.id) {
+      if (pane.activeId === action.id && nextTabs.length > 0) {
         nextActiveId = loc.t > 0 ? pane.tabs[loc.t - 1].id : pane.tabs[loc.t + 1].id
       }
       const withRemoved = replacePane(state, loc.p, { tabs: nextTabs, activeId: nextActiveId })
