@@ -1,7 +1,21 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createTabsController } from '../../src/main/tabsController'
 import type { PtyHandle } from '../../src/main/pty'
+import type { Pane, Tab, TabsState } from '../../src/shared/types'
 
+// ---------------------------------------------------------------------------
+// State shape helpers (mirrors tabs.test.ts)
+// ---------------------------------------------------------------------------
+function makeState(panes: Pane[], activePaneIndex = 0, splitRatio = 0.5): TabsState {
+  return { panes, activePaneIndex, splitRatio }
+}
+function onePane(tabs: Tab[], activeId?: string): TabsState {
+  return makeState([{ tabs, activeId: activeId ?? tabs[0].id }])
+}
+
+// ---------------------------------------------------------------------------
+// Fake pty factory
+// ---------------------------------------------------------------------------
 const makeFakePtyFactory = () => {
   const created: string[] = []
   const killed: string[] = []
@@ -55,7 +69,7 @@ describe('createTabsController', () => {
       onDialogConfirm: async () => true,
       onData: () => {},
     })
-    expect(ctrl.getState().tabs).toHaveLength(1)
+    expect(ctrl.getState().panes[0].tabs).toHaveLength(1)
     expect(factory.created).toEqual(['1'])
   })
 
@@ -69,7 +83,7 @@ describe('createTabsController', () => {
     })
     ctrl.newTab()
     expect(factory.created).toEqual(['1', '2'])
-    expect(ctrl.getState().activeId).toBe('2')
+    expect(ctrl.getState().panes[0].activeId).toBe('2')
   })
 
   it('closeTab kills pty and removes tab when no children', async () => {
@@ -84,7 +98,7 @@ describe('createTabsController', () => {
     const result = await ctrl.closeTab('2')
     expect(result).toBe('closed')
     expect(factory.killed).toEqual(['2'])
-    expect(ctrl.getState().tabs).toHaveLength(1)
+    expect(ctrl.getState().panes[0].tabs).toHaveLength(1)
   })
 
   it('closeTab prompts dialog and cancels close on deny', async () => {
@@ -99,7 +113,7 @@ describe('createTabsController', () => {
     const result = await ctrl.closeTab('2')
     expect(result).toBe('cancelled')
     expect(factory.killed).toEqual([])
-    expect(ctrl.getState().tabs).toHaveLength(2)
+    expect(ctrl.getState().panes[0].tabs).toHaveLength(2)
   })
 
   it('closeTab prompts dialog and proceeds on confirm', async () => {
@@ -169,7 +183,7 @@ describe('createTabsController', () => {
       onData: () => {},
     })
     ctrl.renameTab('1', 'main')
-    expect(ctrl.getState().tabs[0].customName).toBe('main')
+    expect(ctrl.getState().panes[0].tabs[0].customName).toBe('main')
   })
 
   it('activateTab updates activeId', () => {
@@ -182,7 +196,7 @@ describe('createTabsController', () => {
     })
     ctrl.newTab()
     ctrl.activateTab('1')
-    expect(ctrl.getState().activeId).toBe('1')
+    expect(ctrl.getState().panes[0].activeId).toBe('1')
   })
 
   it('subscribers are notified on state changes', () => {
@@ -194,7 +208,7 @@ describe('createTabsController', () => {
       onData: () => {},
     })
     const received: number[] = []
-    ctrl.subscribe(s => received.push(s.tabs.length))
+    ctrl.subscribe(s => received.push(s.panes[0].tabs.length))
     ctrl.newTab()
     ctrl.newTab()
     expect(received).toEqual([2, 3])
@@ -203,13 +217,13 @@ describe('createTabsController', () => {
   it('loads initial state from store when provided', () => {
     const factory = makeFakePtyFactory()
     const store = {
-      load: () => ({
-        tabs: [
+      load: () => onePane(
+        [
           { id: '5', customName: 'main', cwd: null },
           { id: '7', customName: null, cwd: null },
         ],
-        activeId: '7',
-      }),
+        '7',
+      ),
       save: vi.fn(),
     }
     const ctrl = createTabsController({
@@ -219,18 +233,18 @@ describe('createTabsController', () => {
       onData: () => {},
       store,
     })
-    expect(ctrl.getState().tabs).toHaveLength(2)
-    expect(ctrl.getState().activeId).toBe('7')
+    expect(ctrl.getState().panes[0].tabs).toHaveLength(2)
+    expect(ctrl.getState().panes[0].activeId).toBe('7')
     expect(factory.created).toEqual(['5', '7']) // one pty per restored tab
   })
 
   it('next new tab ID continues past the max restored ID', () => {
     const factory = makeFakePtyFactory()
     const store = {
-      load: () => ({
-        tabs: [{ id: '5', customName: null, cwd: null }, { id: '9', customName: null, cwd: null }],
-        activeId: '5',
-      }),
+      load: () => onePane(
+        [{ id: '5', customName: null, cwd: null }, { id: '9', customName: null, cwd: null }],
+        '5',
+      ),
       save: vi.fn(),
     }
     const ctrl = createTabsController({
@@ -242,14 +256,14 @@ describe('createTabsController', () => {
     })
     ctrl.newTab()
     // New tab ID should be '10' (= max restored 9 + 1)
-    expect(ctrl.getState().tabs.map(t => t.id)).toContain('10')
+    expect(ctrl.getState().panes[0].tabs.map(t => t.id)).toContain('10')
   })
 
   it('captureCwds uses getCwdForPid to update tab cwds', async () => {
     const factory = makeFakePtyFactory()
     const getCwdForPid = vi.fn(async (pid: number) => '/mocked/' + pid)
     const store = {
-      load: () => ({ tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' }),
+      load: () => onePane([{ id: '1', customName: null, cwd: null }], '1'),
       save: vi.fn(),
     }
     const ctrl = createTabsController({
@@ -262,7 +276,7 @@ describe('createTabsController', () => {
     })
     await ctrl.captureCwds()
     // pid used by factory is parseInt(tabId) + 1000 → tab 1 → pid 1001 → cwd /mocked/1001
-    expect(ctrl.getState().tabs[0].cwd).toBe('/mocked/1001')
+    expect(ctrl.getState().panes[0].tabs[0].cwd).toBe('/mocked/1001')
     expect(getCwdForPid).toHaveBeenCalledWith(1001)
   })
 
@@ -275,7 +289,7 @@ describe('createTabsController', () => {
       onData: () => {},
     })
     await ctrl.captureCwds()
-    expect(ctrl.getState().tabs[0].cwd).toBe(null)
+    expect(ctrl.getState().panes[0].tabs[0].cwd).toBe(null)
   })
 
   it('captureCwds skips tabs where getCwdForPid returns null', async () => {
@@ -289,7 +303,7 @@ describe('createTabsController', () => {
       getCwdForPid,
     })
     await ctrl.captureCwds()
-    expect(ctrl.getState().tabs[0].cwd).toBe(null)
+    expect(ctrl.getState().panes[0].tabs[0].cwd).toBe(null)
   })
 
   it('debounces store.save on state changes', () => {
@@ -297,7 +311,7 @@ describe('createTabsController', () => {
     const factory = makeFakePtyFactory()
     const saveMock = vi.fn()
     const store = {
-      load: () => ({ tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' }),
+      load: () => onePane([{ id: '1', customName: null, cwd: null }], '1'),
       save: saveMock,
     }
     const ctrl = createTabsController({
@@ -315,7 +329,7 @@ describe('createTabsController', () => {
     expect(saveMock).toHaveBeenCalledTimes(0)
     vi.advanceTimersByTime(1)
     expect(saveMock).toHaveBeenCalledTimes(1)
-    expect(saveMock.mock.calls[0][0].tabs).toHaveLength(2)
+    expect(saveMock.mock.calls[0][0].panes[0].tabs).toHaveLength(2)
     vi.useRealTimers()
   })
 
@@ -324,7 +338,7 @@ describe('createTabsController', () => {
     const factory = makeFakePtyFactory()
     const saveMock = vi.fn()
     const store = {
-      load: () => ({ tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' }),
+      load: () => onePane([{ id: '1', customName: null, cwd: null }], '1'),
       save: saveMock,
     }
     const ctrl = createTabsController({
@@ -370,7 +384,7 @@ describe('createTabsController', () => {
     const saveMock = vi.fn()
     const getCwdForPid = vi.fn(async () => '/home/test')
     const store = {
-      load: () => ({ tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' }),
+      load: () => onePane([{ id: '1', customName: null, cwd: null }], '1'),
       save: saveMock,
     }
     const ctrl = createTabsController({
@@ -386,7 +400,71 @@ describe('createTabsController', () => {
     // Must have saved without advancing timer
     expect(saveMock).toHaveBeenCalledTimes(1)
     const savedState = saveMock.mock.calls[0][0]
-    expect(savedState.tabs[0].cwd).toBe('/home/test')
+    expect(savedState.panes[0].tabs[0].cwd).toBe('/home/test')
     vi.useRealTimers()
+  })
+})
+
+describe('toggleSplit', () => {
+  it('splits from one pane to two and spawns a pty for the new tab', () => {
+    const factory = makeFakePtyFactory()
+    const ctrl = createTabsController({
+      spawnPty: (tabId, _cwd) => factory.spawn(tabId),
+      hasChildren: async () => false,
+      onDialogConfirm: async () => true,
+      onData: () => {},
+    })
+    // Initially 1 pane, 1 tab, 1 pty spawned
+    expect(factory.created).toHaveLength(1)
+    ctrl.toggleSplit()
+    const s = ctrl.getState()
+    expect(s.panes).toHaveLength(2)
+    expect(s.activePaneIndex).toBe(1)
+    // A second pty should have been spawned for the new tab in pane 1
+    expect(factory.created).toHaveLength(2)
+  })
+
+  it('unsplits from two panes to one without killing ptys', () => {
+    const factory = makeFakePtyFactory()
+    const ctrl = createTabsController({
+      spawnPty: (tabId, _cwd) => factory.spawn(tabId),
+      hasChildren: async () => false,
+      onDialogConfirm: async () => true,
+      onData: () => {},
+    })
+    ctrl.toggleSplit() // enter split state
+    const killCountBefore = factory.killed.length
+    ctrl.toggleSplit() // unsplit
+    const s = ctrl.getState()
+    expect(s.panes).toHaveLength(1)
+    // No additional pty kills should have happened
+    expect(factory.killed.length).toBe(killCountBefore)
+  })
+})
+
+describe('moveTabToPane', () => {
+  it('moves a tab between panes without respawning pty', () => {
+    const factory = makeFakePtyFactory()
+    const ctrl = createTabsController({
+      spawnPty: (tabId, _cwd) => factory.spawn(tabId),
+      hasChildren: async () => false,
+      onDialogConfirm: async () => true,
+      onData: () => {},
+    })
+    // Set up split state: pane 0 = [tab '1'], pane 1 = [tab '2'] (active)
+    ctrl.toggleSplit()
+    // Add a second tab to pane 1 (currently active) so pane 1 has 2 tabs
+    // and moving one of them to pane 0 leaves pane 1 non-empty.
+    ctrl.newTab() // tab '3' → pane 1 = [tab '2', tab '3']
+    const spawnCountBefore = factory.created.length
+    // Move tab '2' from pane 1 to pane 0
+    ctrl.moveTabToPane('2', 0, null)
+    // No new pty should have been spawned
+    expect(factory.created.length).toBe(spawnCountBefore)
+    // Tab '2' should now be in pane 0
+    const s = ctrl.getState()
+    expect(s.panes).toHaveLength(2)
+    const pane0TabIds = s.panes[0].tabs.map(t => t.id)
+    expect(pane0TabIds).toContain('2')
   })
 })

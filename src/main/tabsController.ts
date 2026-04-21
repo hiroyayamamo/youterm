@@ -30,13 +30,17 @@ export interface TabsController {
   disposeAll(): void
   captureCwds(): Promise<void>
   flushSave(): void
+  toggleSplit(): void
+  activatePane(index: 0 | 1): void
+  setSplitRatio(ratio: number): void
+  moveTabToPane(tabId: string, paneIndex: 0 | 1, beforeTabId: string | null): void
 }
 
 export function createTabsController(deps: TabsControllerDeps): TabsController {
   const debounceMs = deps.debounceMs ?? 200
   let state: TabsState = deps.store ? deps.store.load() : INITIAL_TABS_STATE
   // Ensure nextId bumps past the maximum existing numeric id
-  const maxNumericId = state.tabs.reduce((acc, t) => {
+  const maxNumericId = state.panes.flatMap(p => p.tabs).reduce((acc, t) => {
     const n = Number(t.id)
     return Number.isFinite(n) && n > acc ? n : acc
   }, 0)
@@ -47,7 +51,7 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
   let saveTimer: ReturnType<typeof setTimeout> | null = null
 
   const spawnFor = (tabId: string) => {
-    const tab = state.tabs.find(t => t.id === tabId)
+    const tab = state.panes.flatMap(p => p.tabs).find(t => t.id === tabId)
     const cwd = tab?.cwd ?? null
     const pty = deps.spawnPty(tabId, cwd)
     pty.onData(data => deps.onData(tabId, data))
@@ -55,7 +59,9 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
     deps.onSpawn?.(tabId)
   }
 
-  for (const t of state.tabs) spawnFor(t.id)
+  for (const pane of state.panes) {
+    for (const t of pane.tabs) spawnFor(t.id)
+  }
 
   const scheduleSave = () => {
     if (!deps.store) return
@@ -87,7 +93,8 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
     const getter = deps.getCwdForPid
     if (!getter) return
     const cwds: Record<string, string> = {}
-    for (const tab of state.tabs) {
+    const allTabs = state.panes.flatMap(p => p.tabs)
+    for (const tab of allTabs) {
       const pty = ptys.get(tab.id)
       if (!pty) continue
       const pid = pty.getPid()
@@ -116,7 +123,8 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
       spawnFor(id)
     },
     async closeTab(tabId: string): Promise<CloseResult> {
-      if (state.tabs.length === 1 && state.tabs[0].id === tabId) {
+      const total = state.panes.reduce((n, p) => n + p.tabs.length, 0)
+      if (total === 1 && state.panes[0].tabs[0].id === tabId) {
         return 'close-window'
       }
       const hasChild = await deps.hasChildren(tabId)
@@ -158,5 +166,25 @@ export function createTabsController(deps: TabsControllerDeps): TabsController {
     },
     captureCwds,
     flushSave,
+    toggleSplit() {
+      if (state.panes.length === 2) {
+        apply({ type: 'unsplit-panes' })
+      } else {
+        const newId = String(nextId++)
+        // Apply first so the renderer learns about the new tab before its
+        // splash / pty data arrives, then spawn the pty.
+        apply({ type: 'split-panes', newTabId: newId })
+        spawnFor(newId)
+      }
+    },
+    activatePane(index: 0 | 1) {
+      apply({ type: 'activate-pane', index })
+    },
+    setSplitRatio(ratio: number) {
+      apply({ type: 'set-split-ratio', ratio })
+    },
+    moveTabToPane(tabId: string, paneIndex: 0 | 1, beforeTabId: string | null) {
+      apply({ type: 'move-tab-to-pane', id: tabId, paneIndex, beforeId: beforeTabId })
+    },
   }
 }
