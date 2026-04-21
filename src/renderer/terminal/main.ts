@@ -196,12 +196,22 @@ async function init(): Promise<void> {
     if (existing) {
       if (existing.container.parentElement !== targetTermArea) {
         targetTermArea.appendChild(existing.container)
-        requestAnimationFrame(() => {
+        // Multi-shot fit after re-parent. One rAF often runs before the
+        // browser has settled the new flex layout — the container's
+        // width reads stale and fit() wedges xterm at the old narrow
+        // cols. Three shots (rAF, 50 ms, 150 ms) plus a manual refresh
+        // ensures the final dimensions are picked up and the buffer is
+        // redrawn to them.
+        const doFit = () => {
           try {
             existing.fit.fit()
             window.youtermAPI.ptyResize(tabId, { cols: existing.term.cols, rows: existing.term.rows })
+            existing.term.refresh(0, existing.term.rows - 1)
           } catch {}
-        })
+        }
+        requestAnimationFrame(doFit)
+        setTimeout(doFit, 50)
+        setTimeout(doFit, 150)
       }
       return existing
     }
@@ -350,38 +360,49 @@ async function init(): Promise<void> {
     return { container, tabBarEl, termArea, tabBar }
   }
 
-  function rebuildPaneLayout(paneCount: 1 | 2) {
-    // Detach any existing xterm containers before removing panes so we can
-    // re-insert them into the new layout below.
-    for (const pd of paneDOMs) {
-      Array.from(pd.termArea.children).forEach(ch => pd.termArea.removeChild(ch))
-      pd.container.remove()
-    }
-    paneDOMs.length = 0
-
-    // Also remove any splitter element left over from a previous 2-pane layout.
-    // root is guaranteed non-null here (checked at the top of init()).
+  // Adjust the pane layout to the target count, preserving pane 0 so its
+  // xterm container never has to be detached/re-parented. Only pane 1 and
+  // the splitter are added or removed. Re-parenting the active xterm was
+  // the root cause of stale widths after split→unsplit: the container
+  // briefly had zero dimensions during the rebuild, fit() ran on those,
+  // and xterm got wedged at the narrow cols.
+  function ensurePaneCount(paneCount: 1 | 2) {
     const rootEl = root!
-    const oldSplitter = rootEl.querySelector('#splitter')
-    if (oldSplitter) oldSplitter.remove()
 
-    const newPane0 = buildPaneDOM(0)
-    rootEl.appendChild(newPane0.container)
-    paneDOMs.push(newPane0)
-    if (paneCount === 2) {
+    // First-time: create pane 0 if missing.
+    if (paneDOMs.length === 0) {
+      const p0 = buildPaneDOM(0)
+      rootEl.appendChild(p0.container)
+      paneDOMs.push(p0)
+      observer.observe(p0.termArea)
+    }
+
+    if (paneCount === 2 && paneDOMs.length === 1) {
+      // Split: add splitter + pane 1. Pane 0 untouched.
       const splitter = document.createElement('div')
       splitter.id = 'splitter'
       rootEl.appendChild(splitter)
       installSplitterDrag(splitter)
 
-      const newPane1 = buildPaneDOM(1)
-      rootEl.appendChild(newPane1.container)
-      paneDOMs.push(newPane1)
-    }
-
-    // Observe all termAreas for resize so refitActive stays accurate.
-    for (const pd of paneDOMs) {
-      observer.observe(pd.termArea)
+      const p1 = buildPaneDOM(1)
+      rootEl.appendChild(p1.container)
+      paneDOMs.push(p1)
+      observer.observe(p1.termArea)
+    } else if (paneCount === 1 && paneDOMs.length === 2) {
+      // Unsplit: detach pane 1's tab-term children (floating) so
+      // ensureRuntime can re-parent them into pane 0, then remove pane 1
+      // and the splitter. Pane 0 stays; its xterm just gets a resize
+      // event via the ResizeObserver when the splitter is gone.
+      const p1 = paneDOMs[1]
+      Array.from(p1.termArea.children).forEach(ch => p1.termArea.removeChild(ch))
+      p1.container.remove()
+      observer.unobserve(p1.termArea)
+      const splitter = rootEl.querySelector('#splitter')
+      splitter?.remove()
+      // Clear any inline flexBasis left on pane 0 from split mode so it
+      // takes the full width again.
+      paneDOMs[0].container.style.flexBasis = ''
+      paneDOMs.pop()
     }
   }
 
@@ -454,7 +475,7 @@ async function init(): Promise<void> {
     tabsState = state
     const expectedPaneCount = state.panes.length as 1 | 2
     if (paneDOMs.length !== expectedPaneCount) {
-      rebuildPaneLayout(expectedPaneCount)
+      ensurePaneCount(expectedPaneCount)
     }
 
     if (expectedPaneCount === 2) {
@@ -497,7 +518,7 @@ async function init(): Promise<void> {
     const initialTabs = await window.youtermAPI.tabsGetInitial()
     tabsState = initialTabs
     const expectedPaneCount = initialTabs.panes.length as 1 | 2
-    rebuildPaneLayout(expectedPaneCount)
+    ensurePaneCount(expectedPaneCount)
     if (expectedPaneCount === 2) {
       applySplitRatioToLayout(initialTabs.splitRatio)
     }

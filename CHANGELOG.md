@@ -2,6 +2,18 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.16.6] — 2026-04-21
+
+### Fixed
+- **split → unsplit 後、左 pane の xterm 幅が拡がらず、コンテンツが狭いまま/重複表示される問題を修正**
+  - 原因: `rebuildPaneLayout` が panes 数変更時に**全 pane の DOM を destroy して再生成**していた。左 pane の xterm container が detach → new termArea への re-attach の過程を毎回経るため、fit のタイミングでコンテナ幅が 0 または前の値のまま読まれ、xterm が狭い cols で固まる。xterm 内部の reflow 済みバッファが stale なまま表示されて「同じメッセージが重複して見える」現象も併発
+  - 対応:
+    - `rebuildPaneLayout` → `ensurePaneCount` に refactor。**pane 0 を保持**し、split では pane 1 + splitter を追加、unsplit では pane 1 + splitter だけ除去。pane 0 の xterm container は常に同じ termArea に居続ける
+    - 追加の防御: `ensureRuntime` で container re-parent が必要な tab についてのみ、fit を **3 段(rAF / 50ms / 150ms)で発射** + `term.refresh(0, rows-1)` で強制再描画
+  - 結果: 左 pane の xterm は split/unsplit で触られなくなり、ResizeObserver 経由の fit 1 発で正しく幅追従。右 pane から移動してきた tab 側も多段 fit で確実にサイズ確定
+
+---
+
 ## [0.16.5] — 2026-04-21
 
 ### Fixed
