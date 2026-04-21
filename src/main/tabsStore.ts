@@ -16,20 +16,62 @@ function isValidTab(raw: unknown): raw is Tab {
   return true
 }
 
-export function validateTabsState(raw: unknown): TabsState {
+function migrate(raw: unknown): TabsState {
   if (!raw || typeof raw !== 'object') return INITIAL_TABS_STATE
-  const r = raw as Record<string, unknown>
-  if (!Array.isArray(r.tabs) || r.tabs.length === 0) return INITIAL_TABS_STATE
-  const tabs: Tab[] = []
-  for (const t of r.tabs) {
-    if (!isValidTab(t)) return INITIAL_TABS_STATE
-    const rawCwd = (t as unknown as { cwd?: unknown }).cwd
-    const cwd = typeof rawCwd === 'string' ? rawCwd : null
-    tabs.push({ id: t.id, customName: t.customName, cwd })
+  const obj = raw as Record<string, unknown>
+
+  // Old shape: { tabs, activeId }
+  if (Array.isArray(obj.tabs) && typeof obj.activeId === 'string' && !('panes' in obj)) {
+    if (!obj.tabs.every((t: unknown) => isValidTab(t))) return INITIAL_TABS_STATE
+    const tabs = (obj.tabs as Array<{ id: string; customName: string | null; cwd?: string | null }>).map(t => ({
+      id: t.id,
+      customName: t.customName,
+      cwd: typeof t.cwd === 'string' ? t.cwd : null,
+    })) as TabsState['panes'][0]['tabs']
+    return {
+      panes: [{ tabs, activeId: obj.activeId as string }],
+      activePaneIndex: 0,
+      splitRatio: 0.5,
+    }
   }
-  const activeCandidate = typeof r.activeId === 'string' ? r.activeId : ''
-  const activeId = tabs.some(t => t.id === activeCandidate) ? activeCandidate : tabs[0].id
-  return { tabs, activeId }
+
+  // New shape validation
+  if (!Array.isArray(obj.panes) || obj.panes.length < 1 || obj.panes.length > 2) {
+    return INITIAL_TABS_STATE
+  }
+  const panes = (obj.panes as unknown[]).map(p => {
+    if (!p || typeof p !== 'object') return null
+    const pp = p as Record<string, unknown>
+    if (!Array.isArray(pp.tabs) || typeof pp.activeId !== 'string') return null
+    if (!pp.tabs.every((t: unknown) => isValidTab(t))) return null
+    const tabs = (pp.tabs as Array<{ id: string; customName: string | null; cwd?: string | null }>).map(t => ({
+      id: t.id,
+      customName: t.customName,
+      cwd: typeof t.cwd === 'string' ? t.cwd : null,
+    })) as TabsState['panes'][0]['tabs']
+    return { tabs, activeId: pp.activeId as string }
+  })
+  if (panes.some(p => p === null)) return INITIAL_TABS_STATE
+  const panesValid = panes as TabsState['panes']
+  // Every pane must have ≥1 tab; activeId must exist among its tabs
+  for (const p of panesValid) {
+    if (p.tabs.length === 0) return INITIAL_TABS_STATE
+    if (!p.tabs.some(t => t.id === p.activeId)) return INITIAL_TABS_STATE
+  }
+
+  const activePaneIndex =
+    typeof obj.activePaneIndex === 'number' && obj.activePaneIndex >= 0 && obj.activePaneIndex < panesValid.length
+      ? obj.activePaneIndex
+      : 0
+
+  let splitRatio = typeof obj.splitRatio === 'number' ? obj.splitRatio : 0.5
+  if (!Number.isFinite(splitRatio) || splitRatio < 0.1 || splitRatio > 0.9) splitRatio = 0.5
+
+  return { panes: panesValid, activePaneIndex, splitRatio }
+}
+
+export function validateTabsState(raw: unknown): TabsState {
+  return migrate(raw)
 }
 
 export async function createRealTabsStore(): Promise<TabsStore> {
@@ -43,7 +85,7 @@ export async function createRealTabsStore(): Promise<TabsStore> {
   return {
     load(): TabsState {
       try {
-        return validateTabsState(store.store)
+        return migrate(store.store)
       } catch (err) {
         console.error('[tabsStore] load failed:', err)
         return INITIAL_TABS_STATE
