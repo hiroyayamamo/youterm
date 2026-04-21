@@ -2,6 +2,17 @@
 
 youterm の変更履歴。[Keep a Changelog](https://keepachangelog.com/) 準拠、[Semantic Versioning](https://semver.org/lang/ja/) 準拠。
 
+## [0.16.1] — 2026-04-21
+
+### Security
+- **Electron を 32.3.3 → 41.2.1 に更新**(段階的に 32 → 34 → 37 → 41)
+  - Electron 起因の 17 件の CVE(GHSA 公開分)を解消 — ASAR integrity bypass、AppleScript injection in moveToApplicationsFolder、service worker 経由の IPC spoof、iframe permission origin mis-routing、複数の use-after-free、Windows 向けハードニング(youterm 非該当だが追従)
+  - typecheck / 142 tests / vite build / electron-builder package すべて通過
+  - Chromium メジャー更新を伴うため、稀に CSS / WebKit 系で挙動差が出る可能性あり(手動確認推奨)
+- npm audit は 14 → 13 件に減少。残り 13 件は全てビルド時のみ使用する dev 依存(`esbuild` / `tar` / `@tootallnate/once`)由来で、`.app` には含まれない
+
+---
+
 ## [0.16.0] — 2026-04-21
 
 ### Added
