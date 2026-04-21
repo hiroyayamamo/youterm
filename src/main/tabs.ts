@@ -7,6 +7,7 @@ export type TabsAction =
   | { type: 'rename-tab'; id: string; name: string | null }
   | { type: 'set-tab-cwds'; cwds: Record<string, string> }
   | { type: 'move-tab'; id: string; beforeId: string | null }
+  | { type: 'split-panes'; newTabId: string }
 
 // --- helpers -----------------------------------------------------------
 
@@ -103,6 +104,18 @@ export function transitionTabs(state: TabsState, action: TabsAction): TabsState 
       })
       if (!changed) return state
       return { ...state, panes: nextPanes }
+    }
+    case 'split-panes': {
+      if (state.panes.length === 2) return state
+      const newPane: Pane = {
+        tabs: [{ id: action.newTabId, customName: null, cwd: null }],
+        activeId: action.newTabId,
+      }
+      return {
+        panes: [state.panes[0], newPane],
+        activePaneIndex: 1,
+        splitRatio: state.splitRatio,
+      }
     }
     case 'move-tab': {
       const fromLoc = locateTab(state, action.id)

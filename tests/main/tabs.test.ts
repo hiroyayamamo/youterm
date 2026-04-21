@@ -134,6 +134,27 @@ describe('transitionTabs', () => {
     })
   })
 
+  describe('split-panes', () => {
+    it('splits a single pane and adds the new tab to the right pane', () => {
+      const s = onePane([{ id: '1', customName: null, cwd: null }])
+      const next = transitionTabs(s, { type: 'split-panes', newTabId: '2' })
+      expect(next.panes).toHaveLength(2)
+      expect(next.panes[0].tabs.map(t => t.id)).toEqual(['1'])
+      expect(next.panes[1].tabs.map(t => t.id)).toEqual(['2'])
+      expect(next.panes[1].activeId).toBe('2')
+      expect(next.activePaneIndex).toBe(1)
+    })
+
+    it('is a no-op when already split', () => {
+      const s = twoPanes(
+        { tabs: [{ id: '1', customName: null, cwd: null }], activeId: '1' },
+        { tabs: [{ id: '2', customName: null, cwd: null }], activeId: '2' },
+      )
+      const next = transitionTabs(s, { type: 'split-panes', newTabId: '3' })
+      expect(next).toBe(s)
+    })
+  })
+
   describe('move-tab', () => {
     const threeTabs = (): TabsState => onePane([
       { id: '1', customName: null, cwd: null },
